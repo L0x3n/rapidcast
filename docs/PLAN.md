@@ -7,7 +7,7 @@ All times are Europe/Stockholm. The full original request is in [BRIEF.md](BRIEF
 | Phase | Window | Scope | Acceptance | Status |
 | --- | --- | --- | --- | --- |
 | P0 | Sat Oct 31 evening | Rules, durable plan, Electron/React/TypeScript scaffold, MIT license, initial commit | Strict checks, Vitest, production build and actual Electron smoke check pass; ask for public Client ID | Complete |
-| P1 | Sat night | Five real tab layouts, public-client device login, refresh, EventSub, chat/feed, simulator | Linus's chat appears within 2 seconds; simulated events render | Not started |
+| P1 | Sat night | Five real tab layouts, public-client device login, refresh, EventSub, chat/feed, simulator | Linus's chat appears within 2 seconds; simulated events render | Implemented; real-account acceptance pending Client ID/login |
 | P2 | Sun Nov 1 morning | 1080p compositor, display/window/camera layers, crop/z-order/opacity, mic/desktop mixer, FFmpeg, RTMP reconnect, recording, health | 10-minute bandwidth test with <1% dropped frames while minimized and fullscreen game runs; short real Twitch stream with synchronized audio | Not started |
 | P3 | Sun midday | Worker/OffscreenCanvas runtime, five built-ins, four scenes, fade/swipe, hotkeys, localhost overlay | Simulated follow reaches program; broken/slow widget is disabled without interrupting output; tag v0.1 | Not started |
 | P4 | Sun afternoon/evening | AI providers, generation/repair/preview, prompt editing, screening, suggestion queue, approvals, attribution/chat reply | Second account sends !widget, approve, widget appears on stream in about 60 seconds | Not started |
@@ -51,6 +51,20 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 
 ## Verification evidence
 
+### P1, October 31
+
+- Implemented Live/Studio/Setup/Stats/Settings layouts, four persisted scene previews, chat/feed, ten simulator fixtures, local public Client ID override, device login/cancel/browser activation, encrypted credentials, auto restore/refresh/validation, subscription diagnostics, viewer polling, chat sending, disconnect/revoke and Twitch Repair.
+- All Twitch/AI secrets stay in main; only normalized public events and sanitized account/connection state cross IPC. Public device activation data crosses the bridge, private device_code does not. Specific actions validate sender and inputs, serialize mutations and return plain-word errors.
+- Native Node WebSocket and fetch avoid adding runtime network dependencies. Subscriptions start concurrently immediately on welcome. Keepalive watchdogs, planned two-socket transfer, ordinary retry/backoff, deduplication, revocation and unavailable Affiliate features are handled. Bound events to 200 and transport dedupe IDs to 1000.
+- Token refresh is single-flight with durable rotation. Startup/hourly validation, per-minute expiry maintenance and one retry after Helix 401. Abort guards cover late OAuth/refresh/encryption completion. Disconnect retains only simulator events. Real revoke success may have an empty response.
+- P1 previews are UI layouts with explicit no-output labels. No Go Live function, fabricated engine metrics, installed runtime widgets or AI configuration claims. Setup is a connection/readiness page; guided onboarding remains P5. Stats summarizes the current bounded buffer and excludes tests by default; persistent charts/reports remain P6.
+- Final P1 verification: 71 Vitest cases in 8 files passed. `npm run build` passed strict TypeScript and all three production bundles. `npm run smoke` passed across tabs, scene selection, simulator IPC, input rejection, actual encrypted storage and renderer sandbox/isolation, with the known separate capturePage warning. The host's native fetch/WebSocket availability is also checked. Tests include logout with an unreadable encrypted login and failed Repair status.
+- Native Windows inspection verified Live and Studio layouts and a clicked Fire event: PixelPilot followed appeared in both the scene preview and test feed with simulated labels. No login dialogs were automated.
+- The final `npm run dev` restart built main/preload and started the renderer server successfully without reported startup errors. Linus stopped the optional follow-up native window lookup with Escape, so no further computer-use calls were made. Earlier native visual verification and the final automated smoke remain the UI evidence.
+- Linus has not yet supplied the Client ID. config/public.json remains blank; Settings supports an override. Real Twitch login, delivery latency under 2 seconds, real EventSub payloads, restoration and revocation need the manual check in P1-TESTS.md. Do not call real-account acceptance passed.
+
+### P0, October 31
+
 - P0, October 31: npm install completed, 102 packages audited, zero reported vulnerabilities. Runtime audit also reported zero vulnerabilities.
 - `npm test`: 17 passing cases in two files. Covers default/override/missing/malformed Client IDs and trusted renderer URL normalization/rejection.
 - `npm run build`: passed strict TypeScript checks and all three production bundles. `npm run smoke`: exit 0, verified real Electron React/IPC, no renderer require/process, actual renderer OS sandbox. Screenshot warning is retained separately as described above.
@@ -61,9 +75,9 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 
 ## Next handoff
 
-1. P0 is ready for its initial local commit. Ask Linus for the public Twitch Client ID in the phase handoff. No push.
-2. On `nästa`, reread AGENTS and PLAN, add supplied Client ID and implement P1.
-3. Ask for interactive Twitch login only once the actual device flow is ready. Never ask Linus to paste access tokens, stream keys or AI secrets into this chat.
+1. P1 implementation is ready and all required automated checks pass. Save the phase in a local commit; no push. Public Client ID was requested asynchronously at phase start and is still pending.
+2. Add the supplied public ID to config/public.json, rebuild, then have Linus authorize in his browser and verify a real chat message within 2 seconds. See P1-TESTS.md. Do not request tokens/stream keys/AI keys in chat.
+3. On `nästa` or `go`, reread AGENTS and PLAN. Next implementation phase is P2: compositor, capture/audio, FFmpeg RTMP, health and recording. Prioritize proving Windows MediaRecorder/desktop-loopback compatibility and minimized/fullscreen behavior. Keep P1 real-account acceptance explicitly pending if it has not yet been performed.
 
 ## Submission tracking
 

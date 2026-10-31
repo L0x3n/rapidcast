@@ -3,13 +3,16 @@ import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { IPC, type AppInfo } from '../shared/contracts'
-import { resolveTwitchClientId } from '../shared/config'
-import { isTrustedRendererUrl } from '../shared/trusted-url'
+import { validateSender, registerStudioIpc } from './ipc'
+import { Storage } from './storage'
+import { Studio } from './studio'
+import { runSmoke } from './smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
 if (smokeTest && smokeProfile) app.setPath('userData', smokeProfile)
 app.setName('RapidCast')
+let studio: Studio | null = null
 
 async function createWindow(): Promise<void> {
   const rendererFile = join(__dirname, '../renderer/index.html')
@@ -36,18 +39,22 @@ async function createWindow(): Promise<void> {
   window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false))
   window.webContents.session.setPermissionCheckHandler(() => false)
 
+  if (!studio) studio = new Studio(new Storage(app.getPath('userData')), state => {
+    for (const open of BrowserWindow.getAllWindows()) {
+      if (!open.isDestroyed()) open.webContents.send(IPC.update, state)
+    }
+  })
+  registerStudioIpc(studio, window, rendererUrl)
+
   ipcMain.removeHandler(IPC.appInfo)
   ipcMain.handle(IPC.appInfo, async (event): Promise<AppInfo> => {
-    if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame ||
-        !isTrustedRendererUrl(event.senderFrame.url, rendererUrl)) {
-      throw new Error('This request did not come from the studio window. Restart RapidCast and try again.')
-    }
+    validateSender(event, window, rendererUrl)
     return {
       name: app.getName(),
       version: app.getVersion(),
       platform: process.platform,
       secureStorageAvailable: await safeStorage.isAsyncEncryptionAvailable(),
-      twitchClientConfigured: resolveTwitchClientId() !== null
+      twitchClientConfigured: Boolean(studio?.snapshot().twitch.clientId)
     }
   })
 
@@ -55,30 +62,7 @@ async function createWindow(): Promise<void> {
   else await window.loadFile(rendererFile)
 
   if (smokeTest) {
-    const result: unknown = await window.webContents.executeJavaScript(`
-      new Promise((resolve, reject) => {
-        const deadline = Date.now() + 10000;
-        const check = () => {
-          if (document.querySelector('[data-app-ready="true"]')) {
-            window.rapidcast.getAppInfo().then(info => resolve({
-              name: info.name,
-              nodeHidden: typeof require === 'undefined' && typeof process === 'undefined',
-              heading: document.querySelector('h1')?.textContent
-            }), reject);
-          } else if (Date.now() > deadline) reject(new Error('Studio did not become ready.'));
-          else setTimeout(check, 50);
-        };
-        check();
-      })
-    `)
-    const rendererProcess = app.getAppMetrics().find((metric) => metric.pid === window.webContents.getOSProcessId())
-    if (!result || typeof result !== 'object' || !('name' in result) || result.name !== 'RapidCast' ||
-        !('nodeHidden' in result) || result.nodeHidden !== true ||
-        !('heading' in result) || result.heading !== 'Your stream.Built live.' ||
-        !rendererProcess?.sandboxed) {
-      throw new Error('The studio smoke check failed. Inspect the main/preload/renderer boundaries.')
-    }
-    console.log('RapidCast smoke passed: React, IPC, renderer isolation, sandbox.')
+    await runSmoke(window)
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -93,6 +77,7 @@ async function createWindow(): Promise<void> {
 
 app.whenReady().then(async () => {
   await createWindow()
+  if (!smokeTest) await studio?.initialize()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow().catch(() => {
@@ -110,3 +95,4 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+app.on('before-quit', () => studio?.dispose())

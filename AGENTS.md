@@ -37,6 +37,8 @@ npm start
 ```
 
 - `build` runs strict type checks and builds main, preload and renderer into `out/`. `smoke` requires a current build, opens a real Electron window using a temporary profile, verifies IPC and isolation, attempts `out/smoke.png`, and exits. Screenshot failure is reported separately from startup-check results; see PLAN for the capturePage limitation.
+- P1 smoke also visits all five tabs, renders follow/chat simulations, persists scene selection, checks invalid Client IDs and performs a real Windows safeStorage encryption round trip. See `docs/P1-TESTS.md` for real-account acceptance.
+- Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
 
@@ -64,6 +66,8 @@ npm start
 ## Twitch and engine gotchas
 
 - Device flow is a Public client with no secret. Device request uses `scopes` plural; token grant is `urn:ietf:params:oauth:grant-type:device_code`. Refresh automatically.
+- Use Electron 45 async safeStorage APIs. Store only ciphertext in twitch.bin. Cancellation must prevent late encryption/refresh work from restoring credentials after logout. Refresh requests are single-flight because Public-client refresh tokens rotate.
+- Validate Twitch tokens at startup and hourly, check expiry each minute, and retry a Helix 401 once with refreshed credentials. Never echo remote error bodies into logs/UI. Twitch revocation can return HTTP 200 with an empty body.
 - Full scopes, Helix routes and EventSub types are listed in BRIEF. Subscribe within 10 seconds of welcome; support keepalive, reconnect and revocation. Follow v2 uses moderator_user_id equal to the logged-in user.
 - Ignore the app account's own chat messages when parsing commands. Custom rewards require Affiliate/Partner; chat commands are the fallback.
 - Resolve the stream key and default ingest through Twitch APIs. Bandwidth tests append `?bandwidthtest=true` and never go public.
