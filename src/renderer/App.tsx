@@ -3,6 +3,7 @@ import type { ActionResult, AppInfo, StudioState } from '../shared/contracts'
 import { LivePage, StudioPage } from './pages/LiveStudio'
 import { SetupPage, SettingsPage, StatsPage } from './pages/AccountPages'
 import type { Action, PageProps, Tab } from './types'
+import type { EngineState } from '../shared/engine'
 
 const tabs: { id: Tab; name: string; icon: string; description: string }[] = [
   { id: 'live', name: 'Live', icon: '◉', description: 'Your stage, your rules.' },
@@ -16,6 +17,7 @@ export function App(): React.JSX.Element {
   const [tab, setTab] = useState<Tab>('live')
   const [state, setState] = useState<StudioState | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
+  const [engine, setEngine] = useState<EngineState | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   useEffect(() => {
@@ -24,10 +26,13 @@ export function App(): React.JSX.Element {
       if (active) setState(current => !current || incoming.revision >= current.revision ? incoming : current)
     }
     const unsubscribe = window.rapidcast.onStudio(apply)
+    const applyEngine = (incoming: EngineState): void => { if (active) setEngine(current => !current || incoming.revision >= current.revision ? incoming : current) }
+    const unsubscribeEngine = window.rapidcast.onEngine(applyEngine)
+    window.rapidcast.getEngine().then(applyEngine).catch(() => { if (active) setError('The engine could not connect. Restart RapidCast.') })
     Promise.all([window.rapidcast.getAppInfo(), window.rapidcast.getStudio()]).then(([appInfo, studio]) => {
       if (active) { setInfo(appInfo); apply(studio) }
     }).catch(() => { if (active) setError('The desktop connection could not start. Restart RapidCast and try again.') })
-    return () => { active = false; unsubscribe() }
+    return () => { active = false; unsubscribe(); unsubscribeEngine() }
   }, [])
 
   const action: Action = async (label, run) => {
@@ -42,7 +47,7 @@ export function App(): React.JSX.Element {
   }
   const current = tabs.find(item => item.id === tab) ?? tabs[0]!
   const titles: Record<Tab, string> = { live: 'Run the show.', studio: 'Build the unexpected.', setup: 'Your first great stream.', stats: 'Read the room.', settings: 'Your studio. Your way.' }
-  const props: PageProps | null = state && info ? { state, info, action, busy: Boolean(busy), go: setTab } : null
+  const props: PageProps | null = state && info && engine ? { state, info, engine, action, busy: Boolean(busy), go: setTab } : null
 
   return <div className="app-shell" data-app-ready={props ? 'true' : 'false'}>
     <aside className="sidebar">
@@ -51,13 +56,13 @@ export function App(): React.JSX.Element {
       <nav aria-label="Main navigation">{tabs.map(item => <button key={item.id} data-tab={item.id}
         className={`nav-item ${tab === item.id ? 'active' : ''}`} aria-current={tab === item.id ? 'page' : undefined}
         onClick={() => setTab(item.id)}><span aria-hidden="true">{item.icon}</span>{item.name}{tab === item.id && <i />}</button>)}</nav>
-      <div className="sidebar-bottom"><span className="accent">✦ BUILT WITH CODEX</span><p>Big ideas.<br />Live possibilities.</p><span className="mono muted">PREVIEW · P1</span></div>
+      <div className="sidebar-bottom"><span className="accent">✦ BUILT WITH CODEX</span><p>Big ideas.<br />Live possibilities.</p><span className="mono muted">ENGINE BETA · P2</span></div>
     </aside>
     <div className="workspace">
       <header className="topbar"><div className="breadcrumb">YOUR WORKSPACE<span>/</span><strong>{current.name.toUpperCase()}</strong></div>
         <div className={`connection-pill ${state?.twitch.phase === 'connected' ? 'connected' : ''}`}><i />
           {state?.twitch.phase === 'connected' ? `@${state.twitch.account?.login}` : state?.twitch.socket === 'reconnecting' ? 'TWITCH RECONNECTING' : state?.twitch.phase === 'waiting' ? 'WAITING FOR TWITCH' : state?.twitch.phase === 'connecting' ? 'CONNECTING TWITCH' : state?.twitch.phase === 'error' ? 'TWITCH NEEDS ATTENTION' : 'TWITCH NOT CONNECTED'}</div>
-        <span className="offline-badge">OUTPUT OFFLINE</span></header>
+        <span className="offline-badge">{engine?.mode ? engine.mode === 'test' ? 'PRIVATE TEST' : engine.mode === 'record' ? 'LOCAL RECORDING' : 'TWITCH OUTPUT' : 'OUTPUT OFFLINE'}</span></header>
       <main className="page-content">
         <div className="page-heading"><div><span className="eyebrow">{current.description}</span><h1>{titles[tab]}</h1></div>
           <div className="heading-actions">{busy && <span className="muted" role="status">{busy}…</span>}

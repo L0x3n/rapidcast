@@ -12,6 +12,7 @@ import { TwitchSession } from './twitch/session'
 import { Helix } from './twitch/helix'
 import { EventSub } from './twitch/eventsub'
 import { TwitchError } from './twitch/http'
+import { request } from './twitch/http'
 
 const offline = (): TwitchState => ({ clientId: '', phase: 'disconnected',
   message: 'Connect Twitch to bring your chat into the studio.', account: null, device: null,
@@ -231,6 +232,24 @@ export class Studio {
     const response = await this.helix.call('chat/messages', 'POST', { broadcaster_id: account.id, sender_id: account.id, message: message.trim() })
     const result = record(Array.isArray(response.data) ? response.data[0] : null)
     if (result.is_sent !== true) throw new Error('Twitch did not send the message. Check channel moderation settings and try again.')
+  }
+  async outputTarget(test: boolean): Promise<string> {
+    const account = this.state.twitch.account
+    if (!this.helix || !account) throw new Error('Connect Twitch before starting a bandwidth test or live stream.')
+    const response = await this.helix.call(`streams/key?broadcaster_id=${encodeURIComponent(account.id)}`)
+    const key = text(record(Array.isArray(response.data) ? response.data[0] : null).stream_key)
+    if (!key || !/^[a-zA-Z0-9_-]+$/.test(key)) throw new Error('Twitch did not return a valid stream key. Reconnect with stream-key permission.')
+    const result = await request('https://ingest.twitch.tv/ingests')
+    const ingests = Array.isArray(result.ingests) ? result.ingests.map(record) : []
+    const ingest = ingests.find(item => item.default === true) ?? ingests.find(item => item.name === 'Default') ?? ingests[0]
+    const template = text(ingest?.url_template_secure || ingest?.url_template)
+    if (!template.includes('{stream_key}')) throw new Error('Twitch did not return a usable ingest template. Try again later.')
+    const url = new URL(template.replace('{stream_key}', key))
+    if (!['rtmp:', 'rtmps:'].includes(url.protocol) || !(url.hostname.endsWith('.live-video.net') || url.hostname.endsWith('.twitch.tv')) || url.username || url.password) {
+      throw new Error('Twitch did not return a trusted ingest server. Try connecting again.')
+    }
+    if (test) url.searchParams.set('bandwidthtest', 'true')
+    return url.href
   }
   simulate(type: Simulation): void { this.push(simulatedEvent(type, `sim-${randomUUID()}`)) }
   clearSimulations(): void { this.state = { ...this.state, events: this.state.events.filter(e => e.source !== 'simulator') }; this.update() }

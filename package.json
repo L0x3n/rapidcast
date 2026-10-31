@@ -6,7 +6,10 @@
   "license": "MIT",
   "author": "Linus",
   "main": "out/main/index.js",
-  "engines": { "node": ">=24 <25", "npm": ">=11 <12" },
+  "engines": {
+    "node": ">=24 <25",
+    "npm": ">=11 <12"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
@@ -14,9 +17,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run typecheck && electron-vite build",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:engine": "node scripts/smoke.mjs --engine",
+    "check:rtmp": "node scripts/check-rtmp.mjs"
   },
   "dependencies": {
+    "ffmpeg-static": "5.3.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

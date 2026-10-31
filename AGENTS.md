@@ -33,11 +33,14 @@ npm test -- src/shared/config.test.ts -t "rejects malformed client IDs"
 npm run test:watch
 npm run build
 npm run smoke
+npm run smoke:engine
+npm run check:rtmp
 npm start
 ```
 
 - `build` runs strict type checks and builds main, preload and renderer into `out/`. `smoke` requires a current build, opens a real Electron window using a temporary profile, verifies IPC and isolation, attempts `out/smoke.png`, and exits. Screenshot failure is reported separately from startup-check results; see PLAN for the capturePage limitation.
 - P1 smoke also visits all five tabs, renders follow/chat simulations, persists scene selection, checks invalid Client IDs and performs a real Windows safeStorage encryption round trip. See `docs/P1-TESTS.md` for real-account acceptance.
+- P2 `smoke:engine` performs native synthetic 1080p30/60 and CPU recordings, minimized timing, audio/video pulse comparison, and capture of the test app's own window. `check:rtmp` uses loopback only and verifies receiver-disconnect recovery plus simultaneous MP4. Run these sequentially; artifacts are in ignored out/engine-smoke. See `docs/P2-TESTS.md` for the mandatory real Twitch/game tests, which remain pending.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -73,6 +76,12 @@ npm start
 - Resolve the stream key and default ingest through Twitch APIs. Bandwidth tests append `?bandwidthtest=true` and never go public.
 - P2: compositor -> MediaRecorder -> bounded IPC chunks -> ffmpeg-static -> H.264/AAC FLV RTMP, optional MP4. NVENC preferred, libx264 veryfast fallback, 2-second keyframes, default 6000 kbps video / 160 kbps 48 kHz audio.
 - Streaming must survive minimizing and fullscreen games. Use a dedicated compositor window with background throttling disabled or offscreen rendering, track-based frame reading and frame timing logs. Measure, do not assume.
+- P2 uses a hidden, sandboxed compositor BrowserWindow with backgroundThrottling=false and its own nonpersistent session. The same bundled preload branches on a host-supplied additional argument; the compositor receives only compositor APIs, never the studio/Twitch bridge. Keep the preload a single bundled CJS entry because sandboxed preload cannot require split local chunks.
+- Camera/display reads use MediaStreamTrackProcessor with one retained VideoFrame per source; close replaced frames. MediaRecorder queues are bounded and host writes are acknowledged. Restarted FFmpeg requires a fresh recorder/header. Do not skip input WebM chunks to relieve pressure.
+- FFmpeg tee uses global -use_fifo/-fifo_options and disables FIFO on its file slave. Nested FIFO options in the slave string were proven to be misparsed by this binary. Preserve the real loopback integration test, including spaces/apostrophes in paths. Never log credential-bearing arguments or raw stderr.
+- Secrets stay in main even for output. Retrieve the key and default ingest through Twitch, prefer the supplied RTMPS URL and append bandwidthtest=true only for test mode. Stop Twitch output on account disconnect/revocation. Local recording can work without Twitch.
+- Compositor missed slots, encoder drops/duplicates and network outage packets are separate metrics. Unknown muxer bitrate is null. After stop, label retained encoder measurements as last output. UI thumbnails are only 2 fps and do not measure output smoothness.
+- Source failures warn and preserve the last frame; compositor crash/watchdog failure stops output. Release devices stops tracks/audio and releases the suspension blocker. Keep runtime warnings plain and actionable. Do not claim the full ten-minute game/Twitch acceptance from short synthetic benchmarks.
 - Exclude secret-bearing ffmpeg arguments and URLs from logs/errors. Reconnect on RTMP drops with clear user-facing recovery status.
 
 ## Release

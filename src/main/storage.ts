@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { record, text } from '../shared/events'
 import { isSceneId, type SceneId } from '../shared/scenes'
 import type { TokenSet } from './twitch/oauth'
+import { defaultEngineSettings, validateEngineSettings, type EngineSettings } from '../shared/engine'
 
 export interface Preferences { clientId: string; activeScene: SceneId }
 export class Storage {
@@ -40,6 +41,13 @@ export class Storage {
     } catch { throw new Error('Your saved settings are unreadable. Rename settings.json in the RapidCast app data folder, then restart.') }
   }
   savePreferences(value: Preferences): Promise<void> { return this.atomic('settings.json', JSON.stringify(value, null, 2)) }
+  async engineSettings(): Promise<EngineSettings> {
+    const raw = await this.read('engine.json')
+    if (!raw) return defaultEngineSettings()
+    try { return validateEngineSettings(JSON.parse(raw.toString('utf8'))) }
+    catch { throw new Error('Output settings could not be loaded. Rename engine.json in the app data folder and restart.') }
+  }
+  saveEngineSettings(value: EngineSettings): Promise<void> { return this.atomic('engine.json', JSON.stringify(value, null, 2)) }
 
   async readTokens(): Promise<TokenSet | null> {
     const encrypted = await this.read('twitch.bin')

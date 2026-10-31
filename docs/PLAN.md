@@ -8,7 +8,7 @@ All times are Europe/Stockholm. The full original request is in [BRIEF.md](BRIEF
 | --- | --- | --- | --- | --- |
 | P0 | Sat Oct 31 evening | Rules, durable plan, Electron/React/TypeScript scaffold, MIT license, initial commit | Strict checks, Vitest, production build and actual Electron smoke check pass; ask for public Client ID | Complete |
 | P1 | Sat night | Five real tab layouts, public-client device login, refresh, EventSub, chat/feed, simulator | Linus's chat appears within 2 seconds; simulated events render | Implemented; real-account acceptance pending Client ID/login |
-| P2 | Sun Nov 1 morning | 1080p compositor, display/window/camera layers, crop/z-order/opacity, mic/desktop mixer, FFmpeg, RTMP reconnect, recording, health | 10-minute bandwidth test with <1% dropped frames while minimized and fullscreen game runs; short real Twitch stream with synchronized audio | Not started |
+| P2 | Sun Nov 1 morning | 1080p compositor, display/window/camera layers, crop/z-order/opacity, mic/desktop mixer, FFmpeg, RTMP reconnect, recording, health | 10-minute bandwidth test with <1% dropped frames while minimized and fullscreen game runs; short real Twitch stream with synchronized audio | Implemented as beta; local integration verified; real device/Twitch/game acceptance pending |
 | P3 | Sun midday | Worker/OffscreenCanvas runtime, five built-ins, four scenes, fade/swipe, hotkeys, localhost overlay | Simulated follow reaches program; broken/slow widget is disabled without interrupting output; tag v0.1 | Not started |
 | P4 | Sun afternoon/evening | AI providers, generation/repair/preview, prompt editing, screening, suggestion queue, approvals, attribution/chat reply | Second account sends !widget, approve, widget appears on stream in about 60 seconds | Not started |
 | P5 | Sun late | Six-step first-run wizard, devices, 15-second bandwidth test, recommendations, style, Repair | Fresh profile reaches ready to go live in under 5 minutes | Not started |
@@ -51,6 +51,22 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 
 ## Verification evidence
 
+### P2, October 31
+
+- Implemented a separate hidden 1920x1080 compositor BrowserWindow with backgroundThrottling=false, sandbox/context isolation, no Node access and no studio/Twitch bridge. It reads capture tracks through MediaStreamTrackProcessor, retains one current frame per source, and draws at 30/60 fps without hidden video elements. UI thumbnails are independent 2 fps JPEGs.
+- Layer model and persistence support display/window, camera, imported PNG/JPG/WebP, text and color, with per-scene X/Y/width/height/z-order/opacity/crop. Widget is reserved for P3. Explicit Apply layer prevents partial geometry edits from issuing overlapping settings writes. Camera/mic defaults stay off until selected; a default-device option supports initial permission/device-label discovery.
+- Web Audio supplies a stable 48 kHz mixed destination track, mic/desktop gain/mute/meters, Windows loopback and silent audio when devices are off. No local audio monitor. Live audio/layer changes keep output tracks; FPS/bitrate/encoder/recording-policy changes require stopping output.
+- MediaRecorder H.264/Opus WebM was supported on this Electron build. Bounded blob/IPC buffers feed the full ffmpeg-static binary path. Output H.264 NVENC or x264 veryfast, CBR target 6000 kbps, 2-second GOP, AAC 160 kbps/48kHz, FLV RTMP(S), optional simultaneous fragmented MP4. Added ffmpeg-static 5.3.0 and third-party license/build/source notices; no native addon build.
+- FFmpeg probes confirmed working NVENC. Native smoke verified real safeStorage, all five tabs, simulated events, renderer isolation, hidden compositor visibility=visible, MediaStreamTrackProcessor availability and actual frames captured from the RapidCast test app window. It did not capture the user's screen/camera/mic or contact Twitch.
+- Latest short minimized synthetic 1080p30 sample: 29.909 fps, 410 drawn / 411 expected slots, 1 missed slot (0.2433%), max gap 83 ms; encoder h264_nvenc, 0 reported encoder drops and 6 duplicates at the sampled point. Synchronized recorded pulse edges differed by at most 39.61 ms. This is a short synthetic check including startup, not the required full-game acceptance.
+- Native 1080p60 sample: 59.974 fps, 345 / 345 slots, 0 missed slots, max gap 32.6 ms. Auto 30/60 fps and explicit CPU MP4 recordings decoded with H.264 1920x1080 and AAC 48kHz. Evidence: out/engine-smoke/benchmark.json, frame-timing.jsonl and three synthetic MP4 clips.
+- Loopback RTMP integration passed after terminating and restarting its receiver during a 13-second synthetic publish. Initial FLV ~3.15 MB, recovered FLV ~5.50 MB and simultaneous MP4 ~10.18 MB all decoded. Recording path contains spaces and an apostrophe. The test found and fixed nested tee FIFO parsing: use global -use_fifo/-fifo_options and disable FIFO on the file slave.
+- Recovery uses bounded network FIFO and keyframe restart. Fatal network-slave/process errors create a fresh MediaRecorder header, retry with backoff and fall back from NVENC when needed. Five process failures stop with an actionable error. Input stalls, renderer crashes, late startup cancellation and account disconnect cannot silently leave output running. Source termination retains the last frame with a warning.
+- Unit/integration suite: 87 tests in 10 files pass, including scene/layer validation, crop/identity limits, frame-slot accounting, FFmpeg contracts/redacted errors, host-only ingest/key resolution and cancellation before late credential/ingest completion. Production build and native engine/loopback checks pass. npm runtime audit reports zero vulnerabilities.
+- Final production rebuild and standard native smoke also passed after the UI wording/last-output-metric updates. Smoke now adds a color layer via the actual UI, edits its name and clicks Apply layer, verifies persisted state, then restores settings. The standard smoke retained its separate optional screenshot warning; the engine smoke screenshot used for visual inspection was successful.
+- Generated native screenshot was inspected from out/smoke.png; the recent capturePage call succeeded. No Windows computer-use actions were needed in this phase. Regular frame logs go in userData/diagnostics, recordings in Videos/RapidCast. Full tests and instructions: P2-TESTS.md.
+- Public Client ID is still missing. Physical camera/microphone/system-loopback quality, a ten-minute Twitch bandwidth test under fullscreen game load and a short public Twitch stream with device sync remain unverified. Retain ENGINE BETA. Follow the Sunday 13:00 OBS-first fallback if the engine is unstable.
+
 ### P1, October 31
 
 - Implemented Live/Studio/Setup/Stats/Settings layouts, four persisted scene previews, chat/feed, ten simulator fixtures, local public Client ID override, device login/cancel/browser activation, encrypted credentials, auto restore/refresh/validation, subscription diagnostics, viewer polling, chat sending, disconnect/revoke and Twitch Repair.
@@ -75,9 +91,9 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 
 ## Next handoff
 
-1. P1 implementation is ready and all required automated checks pass. Save the phase in a local commit; no push. Public Client ID was requested asynchronously at phase start and is still pending.
-2. Add the supplied public ID to config/public.json, rebuild, then have Linus authorize in his browser and verify a real chat message within 2 seconds. See P1-TESTS.md. Do not request tokens/stream keys/AI keys in chat.
-3. On `nästa` or `go`, reread AGENTS and PLAN. Next implementation phase is P2: compositor, capture/audio, FFmpeg RTMP, health and recording. Prioritize proving Windows MediaRecorder/desktop-loopback compatibility and minimized/fullscreen behavior. Keep P1 real-account acceptance explicitly pending if it has not yet been performed.
+1. Save the verified P2 beta implementation in a local phase commit; no push. P1 and P2 real Twitch acceptance are pending Client ID/login. Add Linus's supplied public ID to config/public.json when available, then rebuild. Never request tokens or stream keys in chat.
+2. Have Linus follow P1-TESTS.md and P2-TESTS.md: actual chat latency, real devices/loopback, ten-minute minimized/fullscreen-game private test, then a short intentional public stream. Do not call these passed based on local synthetic evidence.
+3. On `nästa`, `go` or `kör`, reread AGENTS and PLAN. Next is P3: isolated Worker/OffscreenCanvas widget runtime, five built-ins, transitions/hotkeys and localhost OBS overlay URLs. Prioritize the fallback URL. Tag v0.1 only after P3 acceptance. Keep the engine beta pending its real checks.
 
 ## Submission tracking
 

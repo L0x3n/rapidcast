@@ -10,7 +10,8 @@ delete environment.ELECTRON_RUN_AS_NODE
 delete environment.ELECTRON_RENDERER_URL
 
 try {
-  const child = spawn(electron, ['.', '--rapidcast-smoke-test'], {
+  const engineTest = process.argv.includes('--engine')
+  const child = spawn(electron, ['.', '--rapidcast-smoke-test', ...(engineTest ? ['--rapidcast-engine-test'] : [])], {
     cwd: new URL('..', import.meta.url),
     env: environment,
     windowsHide: true,
@@ -20,10 +21,10 @@ try {
   const timeout = setTimeout(() => {
     console.error('The Electron smoke check timed out. Close any stuck RapidCast test window and retry.')
     child.kill()
-  }, 25000)
+  }, engineTest ? 90000 : 25000)
   child.stdout.on('data', (chunk) => {
     const output = chunk.toString()
-    if (output.includes('RapidCast smoke passed:')) passed = true
+    if (output.includes(engineTest ? 'RapidCast engine smoke passed:' : 'RapidCast smoke passed:')) passed = true
     process.stdout.write(output)
   })
   child.stderr.pipe(process.stderr)

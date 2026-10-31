@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P1, studio shell and Twitch connection.** Five tabs provide scene layout previews, Twitch device login, live chat, activity feed, event simulation, connection settings and a current-session activity buffer. Streaming output arrives in P2, widget execution in P3, and AI generation in P4. You can explore scenes and simulations without an account or AI key.
+**Current stage: P2, streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, display/window/camera/image/text/color layers, audio mixing, local MP4 recording, Twitch output and connection settings. Widgets arrive in P3 and AI in P4. Local preview, recording and simulation work without an account or AI key.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -31,11 +31,15 @@ This builds a runnable local Electron app under `out/`. It does not yet create a
 npm test
 npm run build
 npm run smoke
+npm run smoke:engine
+npm run check:rtmp
 ```
 
 `build` includes strict TypeScript checks. `smoke` opens a real Electron window with a temporary profile, visits all five tabs, fires follow/chat simulations, switches scenes, rejects an invalid Client ID, tests an actual safeStorage encryption round trip, and checks OS sandbox and renderer Node isolation. It also attempts to save `out/smoke.png`; unavailable screenshot capture produces a separate warning after the startup checks pass. It does not log in or contact Twitch. `npm run test:watch` runs Vitest interactively.
 
-On the development machine, Electron's `capturePage` returned `UnknownVizError` with both GPU and software rendering. The app was visually verified through native Windows window capture instead. This screenshot limitation is not evidence about the future streaming compositor; P2 still requires full capture and minimized-stream testing.
+`smoke:engine` records synthetic video/audio while minimized, verifies H.264/AAC MP4 and synthetic sync, exercises auto/CPU/60 fps output and captures the test app's own window through MediaStreamTrackProcessor. It saves test clips and timing evidence under `out/engine-smoke/`. `check:rtmp` verifies simultaneous RTMP/MP4 and recovery after a loopback receiver disconnect. Run these sequentially. Neither test contacts Twitch or records the user's screen/camera/microphone.
+
+Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine tests produced screenshots successfully. Streaming output uses canvas tracks, not capturePage. The full ten-minute Twitch/fullscreen-game test is still pending; see [P2 acceptance](docs/P2-TESTS.md).
 
 ## Configuration and security
 
@@ -55,7 +59,17 @@ Tokens refresh automatically, with a single refresh shared by concurrent request
 
 See [docs/P1-TESTS.md](docs/P1-TESTS.md) for manual acceptance steps and known limits. Implementation follows Twitch's [device-flow documentation](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow), [WebSocket lifecycle](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/), and [token validation requirements](https://dev.twitch.tv/docs/authentication/validate-tokens/).
 
-**Machine gotcha:** the FFmpeg on PATH is a fake Python launcher. Never call it. The engine phase will use the full binary path from `ffmpeg-static`.
+## Preview, record and stream
+
+1. Open Live and Start preview. Refresh displays/windows, add a layer, choose its source and click Apply layer. Each of the four scenes stores its own layers. Position, size, z-order, opacity and crop are editable. Camera and image layers use explicit selection.
+2. Choose a mic and desktop audio in the mixer if wanted. Check meters, gain and mute. Record locally, then Stop output and open the recording folder to inspect video and audio.
+3. Settings selects 1080p30/60, bitrate, encoder and simultaneous recording. Auto probes NVENC and falls back to x264 veryfast. Stop output before changing these output settings; live layer/audio changes remain available.
+4. Connect Twitch and keep Private Twitch bandwidth test enabled for testing. The host retrieves the key and default ingest; it adds bandwidthtest=true so test streams do not go public. Disable that option only when ready to Go Live on Twitch.
+5. Complete the real device, ten-minute minimized/fullscreen-game and short public-stream checks in [docs/P2-TESTS.md](docs/P2-TESTS.md). Until then, the engine stays beta. P3's OBS browser source remains the planned fallback.
+
+The compositor has its own hidden BrowserWindow with background throttling disabled and reads VideoFrames directly from capture tracks. A 30/60 fps canvas and mixed Web Audio feed MediaRecorder, bounded acknowledged IPC chunks, then the bundled FFmpeg process. UI thumbnails update at 2 fps independently of output. Actual frame timing is logged as local JSONL. Stream keys and credential-bearing process arguments are never logged or exposed to the compositor/UI.
+
+**Machine gotcha:** FFmpeg on PATH is a fake Python launcher. Never call it. All engine code and verification scripts require the absolute binary path from `ffmpeg-static`.
 
 ## Project map
 
@@ -75,3 +89,5 @@ Uses Electron, electron-vite, Vite, React, TypeScript and Vitest. The lockfile p
 Linus directs scope, design and real stream testing. Codex implements the app in the original project chat, runs checks and records phase decisions in the plan. Each phase ends in a local commit. Nothing is pushed without Linus's instruction.
 
 MIT, copyright 2026 Linus. See [LICENSE](LICENSE).
+
+Downloaded executables and dependencies retain their own licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), including the bundled FFmpeg build/source notices.

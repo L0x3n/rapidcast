@@ -3,6 +3,7 @@ import { describeEvent, type StreamEvent } from '../shared/events'
 import { SCENES } from '../shared/scenes'
 import { SIMULATIONS, type Simulation } from '../shared/simulator'
 import type { PageProps } from './types'
+import type { EngineState } from '../shared/engine'
 
 export function PanelTitle({ title, detail }: { title: string; detail?: string }): React.JSX.Element {
   return <div className="panel-title"><h2>{title}</h2>{detail && <span className="mono muted">{detail}</span>}</div>
@@ -14,9 +15,10 @@ export function EventFeed({ events, compact = false }: { events: StreamEvent[]; 
     <div><strong>{describeEvent(event)}</strong><span>{event.source === 'simulator' ? 'SIMULATED · ' : ''}{new Date(event.receivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span></div>
   </div>) : <div className="empty-state small"><span>✦</span><strong>No events yet</strong><p>Connect Twitch or fire a simulated event.</p></div>}</div>
 }
-export function ProgramPreview({ state }: Pick<PageProps, 'state'>): React.JSX.Element {
+export function ProgramPreview({ state, engine }: Pick<PageProps, 'state'> & { engine?: EngineState }): React.JSX.Element {
   const scene = SCENES.find(item => item.id === state.activeScene) ?? SCENES[0]
   const latest = state.events.filter(event => event.type !== 'chat').at(-1)
+  if (engine?.previewActive && engine.preview) return <div className="program-preview actual-preview"><img src={engine.preview} alt="Live compositor program preview" /><span className="preview-caption">PROGRAM CANVAS · UI PREVIEW 2 FPS · OUTPUT {engine.settings.fps} FPS</span></div>
   return <div className={`program-preview scene-${scene.id}`}>
     <div className="art-grid" /><div className="orbit" /><div className="orbit inner" />
     <div className="preview-corner"><span className="tiny-mark">R↗</span><span>{scene.name.toUpperCase()}</span></div>

@@ -30,6 +30,6 @@ export default defineConfig({
       }
     }],
     server: { host: '127.0.0.1' },
-    build: { rollupOptions: { input: resolve('src/renderer/index.html') } }
+    build: { rollupOptions: { input: { index: resolve('src/renderer/index.html'), engine: resolve('src/renderer/engine.html') } } }
   }
 })

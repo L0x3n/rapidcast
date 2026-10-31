@@ -31,6 +31,26 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
       await window.rapidcast.clearSimulations();
       await until(() => document.body.textContent.includes('No events yet'));
       await window.rapidcast.selectScene('starting');
+      const engineBefore = await window.rapidcast.getEngine();
+      const layerType = document.querySelector('select[aria-label="Layer type"]');
+      layerType.value = 'color';
+      layerType.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 50));
+      document.querySelector('.layer-add button').click();
+      await until(() => document.querySelector('.layer-editor'));
+      const name = document.querySelector('.layer-editor .field-grid input');
+      name.focus(); name.value = 'Smoke color layer'; name.blur();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      document.querySelector('.layer-editor .button-row button').click();
+      const layerDeadline = Date.now() + 5000;
+      let layerApplied = false;
+      while (Date.now() < layerDeadline) {
+        const engine = await window.rapidcast.getEngine();
+        if (engine.settings.scenes.starting.some(layer => layer.kind === 'color' && layer.name === 'Smoke color layer')) { layerApplied = true; break; }
+        await new Promise(resolve => setTimeout(resolve, 30));
+      }
+      if (!layerApplied) throw new Error('The layer editor did not apply its changes.');
+      await window.rapidcast.configureEngine(engineBefore.settings);
       return { name: info.name, nodeHidden: typeof require === 'undefined' && typeof process === 'undefined',
         events: snapshot.events.length, source: snapshot.events.every(e => e.source === 'simulator'),
         scene: snapshot.activeScene, rejectsInvalidClient: !invalid.ok };
@@ -52,5 +72,5 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
     if (restored?.accessToken !== tokens.accessToken || encrypted.includes(tokens.accessToken)) throw new Error('Secure storage round-trip failed.')
     await storage.clearTokens()
   } else throw new Error('Secure storage is unavailable for the native smoke test.')
-  console.log('RapidCast smoke passed: five tabs, simulator, scenes, IPC validation, encrypted storage, renderer isolation, sandbox.')
+  console.log('RapidCast smoke passed: five tabs, simulator, scenes, layer editing, IPC validation, encrypted storage, renderer isolation, sandbox.')
 }

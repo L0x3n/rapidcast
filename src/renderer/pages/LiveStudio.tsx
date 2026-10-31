@@ -1,17 +1,21 @@
 import type { PageProps } from '../types'
 import { Chat, EventFeed, PanelTitle, ProgramPreview, SceneSwitcher, Simulator } from '../components'
+import { EngineHealth, OutputControls } from '../engine-controls/Output'
+import { LayerControls } from '../engine-controls/Layers'
+import { AudioControls } from '../engine-controls/Audio'
 
 export function LivePage(props: PageProps): React.JSX.Element {
   const { state } = props
   return <div data-page="live" className="live-layout">
     <div className="main-column">
-      <section className="panel program-panel"><PanelTitle title="Program" detail="1920 × 1080 / LAYOUT PREVIEW" /><ProgramPreview state={state} />
-        <div className="program-toolbar"><span><i className="dot" /> OUTPUT NOT STARTED</span><button className="primary" disabled title="Streaming engine arrives in P2">Go Live <span>↗</span></button></div>
+      <EngineHealth engine={props.engine} />
+      <section className="panel program-panel"><PanelTitle title="Program" detail={`1920 × 1080 / ${props.engine.previewActive ? 'COMPOSITOR' : 'LAYOUT PREVIEW'}`} /><ProgramPreview state={state} engine={props.engine} />
+        <div className="program-toolbar"><span><i className="dot" />{props.engine.phase.toUpperCase()} · ENGINE BETA</span><button className="secondary" disabled={props.busy || props.engine.previewActive} onClick={() => { void props.action('Starting program', () => window.rapidcast.startPreview()) }}>Start preview ↗</button></div>
       </section>
       <section className="scenes-section"><PanelTitle title="Your scenes" detail="SELECT TO PREVIEW" /><SceneSwitcher {...props} /></section>
-      <section className="health-strip" aria-label="Stream health"><div><span>FRAME RATE</span><strong>-- <small>fps</small></strong></div><div><span>BITRATE</span><strong>-- <small>kbps</small></strong></div><div><span>DROPPED FRAMES</span><strong>--</strong></div><p>Engine telemetry arrives in P2.<br />Twitch connection is independent of output.</p></section>
+      <LayerControls {...props} />
     </div>
-    <div className="side-column"><Chat {...props} /><section className="panel"><PanelTitle title="Activity feed" detail="LIVE + TEST" /><EventFeed events={state.events} compact /></section>
+    <div className="side-column"><Chat {...props} /><OutputControls {...props} /><AudioControls {...props} /><section className="panel"><PanelTitle title="Activity feed" detail="LIVE + TEST" /><EventFeed events={state.events} compact /></section>
       <button className="secondary full" onClick={() => props.go('studio')}>✦ Open event simulator</button>
     </div>
   </div>
@@ -24,7 +28,7 @@ export function StudioPage(props: PageProps): React.JSX.Element {
       <textarea aria-label="Widget idea" placeholder="A neon goal bar that celebrates with confetti…" disabled rows={2} />
       <div className="builder-footer"><span className="muted">Widget runtime in P3. AI generation in P4.</span><button className="secondary" onClick={() => props.go('settings')}>Provider settings ↗</button></div>
     </section>
-    <section className="panel"><PanelTitle title="Scene preview" detail="SIMULATED EVENTS RENDER HERE" /><ProgramPreview state={props.state} /></section>
+    <section className="panel"><PanelTitle title="Scene preview" detail="WIDGET RUNTIME IN P3" /><ProgramPreview state={props.state} /></section>
     <section><PanelTitle title="Widget library" detail="COMING IN P3" /><div className="widget-library">{[
       ['◌', 'Chat box'], ['✦', 'Alert box'], ['◷', 'Countdown'], ['↗', 'Events ticker'], ['▰', 'Goal bar']
     ].map(([icon, title]) => <div className="widget-card" key={title}><span>{icon}</span><strong>{title}</strong><small>CODE-DRAWN · PLANNED</small></div>)}</div></section>

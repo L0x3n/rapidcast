@@ -34,6 +34,8 @@ function setup(monetized = true) {
     else if (url.endsWith('/validate')) value = { client_id: 'public123', user_id: 'me', login: 'linus', expires_in: 3600, scopes: TWITCH_SCOPES }
     else if (url.endsWith('/users')) value = { data: [{ id: 'me', display_name: 'Linus', broadcaster_type: monetized ? 'affiliate' : '' }] }
     else if (url.includes('/streams?')) value = { data: [] }
+    else if (url.includes('/streams/key?')) value = { data: [{ stream_key: 'fake_private_stream_key' }] }
+    else if (url === 'https://ingest.twitch.tv/ingests') value = { ingests: [{ default: false, name: 'Default', url_template_secure: 'rtmps://ingest.global-contribute.live-video.net/app/{stream_key}' }] }
     else if (url.endsWith('/eventsub/subscriptions')) value = { data: [{ status: 'enabled' }] }
     else if (url.endsWith('/revoke')) return new Response('')
     else throw new Error('Unexpected endpoint')
@@ -93,6 +95,16 @@ describe('Twitch studio integration with a fake transport', () => {
     await vi.waitFor(() => expect(studio.snapshot().twitch.phase).toBe('connected'))
     expect(studio.snapshot().twitch.subscriptions.filter(s => s.status === 'enabled')).toHaveLength(5)
     expect(studio.snapshot().twitch.subscriptions.filter(s => s.status === 'unavailable')).toHaveLength(5)
+  })
+  it('resolves a host-only default ingest and adds bandwidthtest only for private tests', async () => {
+    const { studio } = setup()
+    await studio.initialize(); await studio.connect()
+    await vi.waitFor(() => expect(FakeWebSocket.sockets).toHaveLength(1))
+    const test = await studio.outputTarget(true)
+    const live = await studio.outputTarget(false)
+    expect(test).toBe('rtmps://ingest.global-contribute.live-video.net/app/fake_private_stream_key?bandwidthtest=true')
+    expect(live).not.toContain('bandwidthtest')
+    expect(JSON.stringify(studio.snapshot())).not.toContain('fake_private_stream_key')
   })
   it('ends the session and clears stored credentials when authorization is revoked', async () => {
     const { studio, storage } = setup()
