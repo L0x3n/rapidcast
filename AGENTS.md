@@ -1,0 +1,78 @@
+# RapidCast engineering guide
+
+## Scope and workflow
+
+- This independent repository is `C:\Users\coute\rapidcast`. Always set the working directory explicitly. Never run git commands in `C:\Users\coute`, which is a separate repository.
+- Linus owns the project. Talk to him in Swedish. All repository content, code, comments, UI, docs and commit messages use English.
+- Read this file and `docs/PLAN.md` at the start of every phase. Read `docs/BRIEF.md` for the full product contract.
+- Build everything in the original Codex chat. Preserve its session ID for submission; do not invent an ID. No delegation unless Linus requests it.
+- Work one phase per turn. End in Swedish with what is done, how to test (at most five steps), and what comes next. Linus replies `nästa` to continue.
+- Decide routine implementation details and record them in PLAN. Ask only for actions Linus must perform: Client ID, logins, live tests and permissions.
+- Run tests and build before claiming success. Distinguish automated verification from unperformed hardware or live tests.
+- Commit each completed phase with a clear English message. Never push without explicit authorization. Keep `main` unless a branch is needed.
+
+## Deadlines (Europe/Stockholm)
+
+- New project code only, written from October 23, 2026 onward. Libraries and templates are allowed.
+- Feature freeze: November 2, 2026 at 14:00. Afterward only fixes, documentation and submission material.
+- Target submission: November 2 at 20:00, allowing YouTube processing. Hard deadline: 23:00.
+- P1-P4 must ship; P5-P6 should ship; P7 and the gallery are optional.
+- If the engine remains unstable November 1 at 13:00, label it beta and prioritize the OBS browser source demo.
+
+## Commands (Node 24, npm 11, Windows 11)
+
+Run in this repository:
+
+```powershell
+npm ci
+npm run dev
+npm run typecheck
+npm test
+npm test -- src/shared/config.test.ts
+npm test -- src/shared/config.test.ts -t "rejects malformed client IDs"
+npm run test:watch
+npm run build
+npm run smoke
+npm start
+```
+
+- `build` runs strict type checks and builds main, preload and renderer into `out/`. `smoke` requires a current build, opens a real Electron window using a temporary profile, verifies IPC and isolation, attempts `out/smoke.png`, and exits. Screenshot failure is reported separately from startup-check results; see PLAN for the capturePage limitation.
+- No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
+- Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
+
+## Structure and code quality
+
+- `src/main`: privileged Electron services, Twitch, AI, engine, local persistence.
+- `src/preload`: narrow typed contextBridge API. Never expose ipcRenderer or generic invoke.
+- `src/renderer`: React studio UI, no Node access.
+- `src/shared`: platform-independent contracts and logic with Vitest tests.
+- Keep source files about 400 lines or fewer. Strict TypeScript, no `any` escapes, actionable plain-language errors.
+- Vitest covers event normalization, widget validation, stats aggregation, packs and scene models as those features land. Use deterministic tests for behavior and failure cases.
+- Dark, energetic UI, one strong accent, big readable type. No em dash characters in UI, README or submission copy. Free-text time inputs parsed to HH:MM, never input type=time. Date fields open a calendar on click.
+- Never show simulated metrics as real stream health. Mark previews and simulator data explicitly.
+
+## Security and data boundaries
+
+- Twitch tokens, stream keys and AI keys exist only in the main process and encrypted Electron safeStorage persistence. Never log them or expose them to renderer/widget code. Do not fall back to plaintext if encryption is unavailable.
+- Client ID is public. Ship Linus's ID in `config/public.json` once supplied, with a future Settings override. Never add a client secret.
+- Local JSON/JSONL data belongs in Electron userData, not the repository. Ignore `.env*`, `data/`, `*.log`, `out/`, `dist/` and `node_modules/`.
+- Use contextIsolation, sandbox, nodeIntegration=false, CSP, sender validation and specific IPC channels. Deny arbitrary navigation, popups and permissions; add narrow device permission handling in P2.
+- AI endpoints and Twitch credentials are handled by the host. Widgets receive normalized public events and host-fetched image bitmaps only.
+- Each widget runs in a separate Worker with OffscreenCanvas, no DOM, Node, network or tokens. Static checks alone are not isolation: enforce runtime network restrictions and watchdog termination. Widget failure must never stop the stream.
+- Validate imported packs before installation. Imported and generated code always goes through the same sandbox pipeline.
+
+## Twitch and engine gotchas
+
+- Device flow is a Public client with no secret. Device request uses `scopes` plural; token grant is `urn:ietf:params:oauth:grant-type:device_code`. Refresh automatically.
+- Full scopes, Helix routes and EventSub types are listed in BRIEF. Subscribe within 10 seconds of welcome; support keepalive, reconnect and revocation. Follow v2 uses moderator_user_id equal to the logged-in user.
+- Ignore the app account's own chat messages when parsing commands. Custom rewards require Affiliate/Partner; chat commands are the fallback.
+- Resolve the stream key and default ingest through Twitch APIs. Bandwidth tests append `?bandwidthtest=true` and never go public.
+- P2: compositor -> MediaRecorder -> bounded IPC chunks -> ffmpeg-static -> H.264/AAC FLV RTMP, optional MP4. NVENC preferred, libx264 veryfast fallback, 2-second keyframes, default 6000 kbps video / 160 kbps 48 kHz audio.
+- Streaming must survive minimizing and fullscreen games. Use a dedicated compositor window with background throttling disabled or offscreen rendering, track-based frame reading and frame timing logs. Measure, do not assume.
+- Exclude secret-bearing ffmpeg arguments and URLs from logs/errors. Reconnect on RTMP drops with clear user-facing recovery status.
+
+## Release
+
+- P3 tags v0.1 after its acceptance test; P8 tags v1.0 only after release checks.
+- P8 includes README, DEVPOST, 3-minute VIDEO shot list, git-history secret scan and clean-clone test. No secrets in submission artifacts.
+- Judges may only see the video and text. Prioritize visible chat-to-widget interaction, legibility, reliability and honest status.
