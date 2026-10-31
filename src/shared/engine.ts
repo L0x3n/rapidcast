@@ -1,5 +1,6 @@
 import { record } from './events'
 import { SCENES, type SceneId } from './scenes'
+import type { Transition } from './widgets'
 
 export type LayerKind = 'display' | 'camera' | 'image' | 'text' | 'color' | 'widget'
 export interface Layer {
@@ -27,13 +28,14 @@ export interface EngineState {
 export interface EngineCommand {
   id: string; type: 'configure' | 'preview' | 'pause' | 'record' | 'end-record' | 'devices'
   settings: EngineSettings; scene: SceneId; runId: string; testPattern: boolean
+  widgetOrigin: string; transition: Transition
 }
 export const ENGINE_IPC = {
   state: 'engine:state', update: 'engine:update', configure: 'engine:configure', sources: 'engine:sources',
   preview: 'engine:preview-start', pause: 'engine:preview-stop', output: 'engine:output-start', stop: 'engine:output-stop',
   image: 'engine:import-image', reveal: 'engine:reveal-recording', ready: 'engine:ready', command: 'engine:command',
   reply: 'engine:reply', telemetry: 'engine:telemetry', thumbnail: 'engine:thumbnail', chunk: 'engine:chunk',
-  devices: 'engine:devices', capture: 'engine:capture-source', asset: 'engine:asset', fault: 'engine:fault', warning: 'engine:warning'
+  devices: 'engine:devices', capture: 'engine:capture-source', asset: 'engine:asset', fault: 'engine:fault', warning: 'engine:warning', widgetsFailed: 'engine:widgets-failed'
 } as const
 
 export function makeLayer(id: string, kind: LayerKind): Layer {

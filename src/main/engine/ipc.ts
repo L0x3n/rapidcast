@@ -60,6 +60,7 @@ export function registerEngineIpc(engine: Engine, window: BrowserWindow, rendere
   })
   on(ENGINE_IPC.fault, (_event, message) => { if (typeof message === 'string') engine.fault(message) })
   on(ENGINE_IPC.warning, (_event, message) => { if (typeof message === 'string') engine.notice(message) })
+  on(ENGINE_IPC.widgetsFailed, (_event, message) => { if (typeof message === 'string') engine.widgetFailure(message.slice(0, 300)) })
   for (const channel of [ENGINE_IPC.chunk, ENGINE_IPC.capture, ENGINE_IPC.asset]) ipcMain.removeHandler(channel)
   ipcMain.handle(ENGINE_IPC.chunk, async (event, runId: unknown, sequence: unknown, data: unknown): Promise<ActionResult> => {
     if (!trusted(event) || typeof runId !== 'string' || typeof sequence !== 'number' || !(data instanceof ArrayBuffer)) return { ok: false, error: 'Invalid video input.' }

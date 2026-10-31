@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, globalShortcut } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -11,13 +11,19 @@ import { Engine } from './engine/controller'
 import { ENGINE_IPC } from '../shared/engine'
 import { registerEngineIpc } from './engine/ipc'
 import { engineSmoke } from './engine/smoke'
+import { Widgets } from './widgets/service'
+import { registerWidgetIpc } from './widgets/ipc'
+import { WIDGET_IPC } from '../shared/widgets'
+import { widgetSmoke } from './widgets/smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
 if (smokeTest && smokeProfile) app.setPath('userData', smokeProfile)
 app.setName('RapidCast')
+app.commandLine.appendSwitch('site-per-process')
 let studio: Studio | null = null
 let engine: Engine | null = null
+let widgets: Widgets | null = null
 let lastScene = 'starting'
 
 async function createWindow(): Promise<void> {
@@ -36,6 +42,7 @@ async function createWindow(): Promise<void> {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
       webSecurity: true
     }
   })
@@ -52,15 +59,24 @@ async function createWindow(): Promise<void> {
     if (state.activeScene !== lastScene) { lastScene = state.activeScene; void engine?.setScene(state.activeScene).catch(() => engine?.notice('A source in the next scene could not load. Output is continuing. Check the selected scene’s capture layers.')) }
     const mode = engine?.snapshot().mode
     if (!state.twitch.account && (mode === 'live' || mode === 'test')) void engine?.stopOutput().catch(() => engine?.fault('Twitch disconnected. Restart the engine before sending output again.'))
+    widgets?.streamChanged(state)
   })
-  if (!engine) engine = new Engine(new Storage(app.getPath('userData')), app.getPath('userData'),
+  if (!engine) { engine = new Engine(new Storage(app.getPath('userData')), app.getPath('userData'),
     smokeTest ? join(app.getPath('userData'), 'recordings') : join(app.getPath('videos'), 'RapidCast'),
     test => studio!.outputTarget(test), state => {
       for (const open of BrowserWindow.getAllWindows()) if (!open.isDestroyed() && open !== engine?.window) open.webContents.send(ENGINE_IPC.update, state)
-    })
+      widgets?.engineChanged(state.settings)
+    }); await engine.initialize() }
+  if (!widgets) {
+    widgets = new Widgets(app.getPath('userData'), engine, studio, process.env.ELECTRON_RENDERER_URL ? new URL(process.env.ELECTRON_RENDERER_URL).origin : 'file:', state => {
+      for (const open of BrowserWindow.getAllWindows()) if (!open.isDestroyed() && open !== engine?.window) open.webContents.send(WIDGET_IPC.update, state)
+    }, smokeTest)
+    await widgets.initialize()
+  }
   registerStudioIpc(studio, window, rendererUrl)
   registerEngineIpc(engine, window, rendererUrl)
-  window.on('closed', () => { void engine?.dispose().finally(() => app.quit()).catch(() => app.exit(0)) })
+  registerWidgetIpc(widgets, window, rendererUrl)
+  window.on('closed', () => { void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
 
   ipcMain.removeHandler(IPC.appInfo)
   ipcMain.handle(IPC.appInfo, async (event): Promise<AppInfo> => {
@@ -80,6 +96,7 @@ async function createWindow(): Promise<void> {
   if (smokeTest) {
     await runSmoke(window)
     if (process.argv.includes('--rapidcast-engine-test') && engine) await engineSmoke(window, engine)
+    if (process.argv.includes('--rapidcast-widget-test') && engine && studio && widgets) await widgetSmoke(window, engine, studio, widgets)
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -94,7 +111,7 @@ async function createWindow(): Promise<void> {
 
 app.whenReady().then(async () => {
   await createWindow()
-  if (!smokeTest) { await engine?.initialize(); await studio?.initialize() }
+  if (!smokeTest) await studio?.initialize()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow().catch(() => {
@@ -113,3 +130,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 app.on('before-quit', () => studio?.dispose())
+app.on('will-quit', () => globalShortcut.unregisterAll())

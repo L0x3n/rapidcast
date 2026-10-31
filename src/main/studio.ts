@@ -251,6 +251,12 @@ export class Studio {
     if (test) url.searchParams.set('bandwidthtest', 'true')
     return url.href
   }
+  async publicAvatar(userId: string): Promise<string | null> {
+    if (!this.helix || !/^[0-9]{1,24}$/.test(userId)) return null
+    const result = await this.helix.call(`users?id=${encodeURIComponent(userId)}`)
+    const url = record(Array.isArray(result.data) ? result.data[0] : null).profile_image_url
+    return typeof url === 'string' ? url : null
+  }
   simulate(type: Simulation): void { this.push(simulatedEvent(type, `sim-${randomUUID()}`)) }
   clearSimulations(): void { this.state = { ...this.state, events: this.state.events.filter(e => e.source !== 'simulator') }; this.update() }
   async selectScene(activeScene: SceneId): Promise<void> {

@@ -2,6 +2,7 @@ import type { StreamEvent } from './events'
 import type { SceneId } from './scenes'
 import type { Simulation } from './simulator'
 import type { EngineUiApi } from './engine-api'
+import type { WidgetApi } from './widgets'
 
 export interface AppInfo {
   name: string
@@ -11,7 +12,7 @@ export interface AppInfo {
   twitchClientConfigured: boolean
 }
 
-export interface RapidCastApi extends EngineUiApi {
+export interface RapidCastApi extends EngineUiApi, WidgetApi {
   getAppInfo(): Promise<AppInfo>
   getStudio(): Promise<StudioState>
   onStudio(listener: (state: StudioState) => void): () => void

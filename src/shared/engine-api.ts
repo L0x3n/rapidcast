@@ -25,4 +25,5 @@ export interface CompositorApi {
   asset(id: string): Promise<string>
   fault(message: string): void
   warning(message: string): void
+  widgetsFailed(message: string): void
 }

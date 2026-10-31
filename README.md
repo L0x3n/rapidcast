@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P2, streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, display/window/camera/image/text/color layers, audio mixing, local MP4 recording, Twitch output and connection settings. Widgets arrive in P3 and AI in P4. Local preview, recording and simulation work without an account or AI key.
+**Current stage: P3, v0.1 widgets and scenes; streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, capture/audio, local MP4 recording, Twitch output, five canvas widgets, transitions, global scene hotkeys and transparent OBS overlays. AI generation arrives in P4. Preview, recording, simulation and OBS overlays work without an account or AI key.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -32,6 +32,7 @@ npm test
 npm run build
 npm run smoke
 npm run smoke:engine
+npm run smoke:widgets
 npm run check:rtmp
 ```
 
@@ -41,11 +42,13 @@ npm run check:rtmp
 
 Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine tests produced screenshots successfully. Streaming output uses canvas tracks, not capturePage. The full ten-minute Twitch/fullscreen-game test is still pending; see [P2 acceptance](docs/P2-TESTS.md).
 
+`smoke:widgets` proves a simulated follow appears in the compositor, verifies the transparent OBS canvas and separate widget renderer process, probes enforced Worker network/eval/DOM/Node restrictions, and injects throwing and infinite-loop widgets during an uninterrupted recording. It also tests scene changes, runtime heartbeat failure and recovery. Evidence is saved in `out/widget-smoke/`. See [P3 tests and widget contract](docs/P3-TESTS.md). The automated browser-source check uses Electron Chromium; importing the URL in OBS itself remains a manual check.
+
 ## Configuration and security
 
 The public Twitch Client ID belongs in `config/public.json` and is currently blank pending Linus's ID. A local Settings override is available. A client secret is never needed. Do not put tokens, stream keys or AI keys in that file or paste them into chat.
 
-Twitch tokens are encrypted through Electron safeStorage in the main process under the OS app data directory. There is no plaintext fallback. Settings are JSON; the encrypted login is `twitch.bin`. The renderer has no Node access and only specific validated IPC actions. No access/refresh token or private device code is exposed to it. No widget or AI-generated code runs yet.
+Twitch tokens are encrypted through Electron safeStorage in the main process under the OS app data directory. There is no plaintext fallback. Settings are JSON; the encrypted login is `twitch.bin`. The renderer has no Node access and only specific validated IPC actions. No access/refresh token or private device code is exposed to it. Widgets receive public events and host-fetched images, run in individual Workers in a separate renderer process, and cannot use network or eval. Static validation, enforced Worker CSP and host watchdogs work together. AI generation is not implemented yet.
 
 ## Connect Twitch
 
@@ -65,17 +68,28 @@ See [docs/P1-TESTS.md](docs/P1-TESTS.md) for manual acceptance steps and known l
 2. Choose a mic and desktop audio in the mixer if wanted. Check meters, gain and mute. Record locally, then Stop output and open the recording folder to inspect video and audio.
 3. Settings selects 1080p30/60, bitrate, encoder and simultaneous recording. Auto probes NVENC and falls back to x264 veryfast. Stop output before changing these output settings; live layer/audio changes remain available.
 4. Connect Twitch and keep Private Twitch bandwidth test enabled for testing. The host retrieves the key and default ingest; it adds bandwidthtest=true so test streams do not go public. Disable that option only when ready to Go Live on Twitch.
-5. Complete the real device, ten-minute minimized/fullscreen-game and short public-stream checks in [docs/P2-TESTS.md](docs/P2-TESTS.md). Until then, the engine stays beta. P3's OBS browser source remains the planned fallback.
+5. Complete the real device, ten-minute minimized/fullscreen-game and short public-stream checks in [docs/P2-TESTS.md](docs/P2-TESTS.md). Until then, the engine stays beta. Studio's OBS browser sources are available as the fallback.
 
 The compositor has its own hidden BrowserWindow with background throttling disabled and reads VideoFrames directly from capture tracks. A 30/60 fps canvas and mixed Web Audio feed MediaRecorder, bounded acknowledged IPC chunks, then the bundled FFmpeg process. UI thumbnails update at 2 fps independently of output. Actual frame timing is logged as local JSONL. Stream keys and credential-bearing process arguments are never logged or exposed to the compositor/UI.
 
 **Machine gotcha:** FFmpeg on PATH is a fake Python launcher. Never call it. All engine code and verification scripts require the absolute binary path from `ffmpeg-static`.
+
+## Widgets and OBS
+
+Open Studio, select a scene and fire a simulator event. The five builtins are chat, alerts, countdown, recent events/ending credits and a follow goal. Add instances from the library; select an instance to edit its parameters, restart or remove it. Parameter changes restart that instance, including its countdown. Use Live's Scene layers for geometry, crop, visibility, opacity and order.
+
+Choose Cut, Fade or Swipe. Global shortcuts Ctrl+Alt+F1/F2/F3/F4 select Starting Soon/Live/BRB/Ending; Settings shows registration status. Games or other apps may intercept a shortcut, so test on the actual game before streaming.
+
+In Studio, copy **Follow active scene** or a fixed scene's OBS URL. Add an OBS Browser source at 1920×1080 and 30 fps. Widget-specific URLs are also available beside each instance. Keep RapidCast open; the loopback server sends only transparent widgets and public events, so add game/camera sources directly in OBS. The normal port starts at 17638 and is persisted; if occupied, RapidCast chooses and saves another port. Copy the current URL after a port change. URLs also accept `localhost` instead of `127.0.0.1`.
+
+Advanced users can install a widget ES module through Studio's code panel. Every installation uses the same validator and Worker isolation. Errors or deadlines produce a visible WIDGET PAUSED badge; output continues. Edit parameters/restart after fixing a widget, or remove it. A runtime-process failure pauses widgets together and Restart reconnects the runtime. See [the widget API and limits](docs/P3-TESTS.md).
 
 ## Project map
 
 - `src/main`: privileged desktop services.
 - `src/preload`: typed, narrow bridge into the UI.
 - `src/renderer`: React studio UI.
+- `src/overlay`: shared browser-source/isolated widget host.
 - `src/shared`: contracts, configuration and pure logic tests.
 - `config/public.json`: public application configuration.
 - [AGENTS.md](AGENTS.md): engineering rules and commands.

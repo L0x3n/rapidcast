@@ -34,6 +34,7 @@ npm run test:watch
 npm run build
 npm run smoke
 npm run smoke:engine
+npm run smoke:widgets
 npm run check:rtmp
 npm start
 ```
@@ -41,6 +42,7 @@ npm start
 - `build` runs strict type checks and builds main, preload and renderer into `out/`. `smoke` requires a current build, opens a real Electron window using a temporary profile, verifies IPC and isolation, attempts `out/smoke.png`, and exits. Screenshot failure is reported separately from startup-check results; see PLAN for the capturePage limitation.
 - P1 smoke also visits all five tabs, renders follow/chat simulations, persists scene selection, checks invalid Client IDs and performs a real Windows safeStorage encryption round trip. See `docs/P1-TESTS.md` for real-account acceptance.
 - P2 `smoke:engine` performs native synthetic 1080p30/60 and CPU recordings, minimized timing, audio/video pulse comparison, and capture of the test app's own window. `check:rtmp` uses loopback only and verifies receiver-disconnect recovery plus simultaneous MP4. Run these sequentially; artifacts are in ignored out/engine-smoke. See `docs/P2-TESTS.md` for the mandatory real Twitch/game tests, which remain pending.
+- P3 `smoke:widgets` verifies compositor follow pixels, transparent browser-source canvas, separate widget renderer process, enforced Worker CSP, exception/infinite-loop termination, scene changes, runtime heartbeat loss/recovery and continuous H.264/AAC recording. Artifacts are in ignored out/widget-smoke. OBS itself, real Twitch images/events and fullscreen-game hotkeys still require manual checks in `docs/P3-TESTS.md`.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.

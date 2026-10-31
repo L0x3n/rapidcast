@@ -4,6 +4,8 @@ import { Sources } from './sources'
 import { AudioMixer } from './audio'
 import { Recorder } from './recorder'
 import { drawProgram } from './draw'
+import { WidgetBridge } from '../runtime/widget-bridge'
+import { SceneTransition } from '../runtime/transitions'
 
 const canvas = document.querySelector('canvas')
 if (!canvas) throw new Error('The program canvas is missing.')
@@ -19,6 +21,8 @@ let clock = new FrameClock(30)
 let lastTelemetry = 0
 let lastThumbnail = 0
 let thumbnailPending = false
+const widgets = new WidgetBridge()
+const transition = new SceneTransition()
 
 async function devices(): Promise<void> {
   const devices = await navigator.mediaDevices.enumerateDevices()
@@ -28,7 +32,9 @@ async function devices(): Promise<void> {
 function draw(): void {
   if (!canvas || !context || !current || !audio || !stream) return
   const now = performance.now()
-  drawProgram(context, current.settings.scenes[current.scene], sources, current.testPattern, current.testPattern ? audio.context.currentTime * 1000 : now)
+  widgets.check(now)
+  drawProgram(context, current.settings.scenes[current.scene], sources, current.testPattern, current.testPattern ? audio.context.currentTime * 1000 : now, widgets)
+  transition.draw(context, now)
   const capture = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined
   capture?.requestFrame()
   const timing = clock.draw(now)
@@ -36,7 +42,7 @@ function draw(): void {
     lastTelemetry = now
     window.compositor.telemetry({ ...timing.stats, visibility: document.visibilityState, ...audio.levels(), mimeType: recorder.mimeType,
       capabilities: [window.MediaStreamTrackProcessor ? 'track-processor' : 'no-track-processor', 'canvas-capture', 'web-audio',
-        ...([...sources.videos.values()].some(source => source.frame) ? ['capture-frame'] : [])] })
+        ...([...sources.videos.values()].some(source => source.frame) ? ['capture-frame'] : []), ...widgets.capabilities()] })
   }
   if (now - lastThumbnail >= 500 && !thumbnailPending) {
     lastThumbnail = now; thumbnailPending = true
@@ -51,8 +57,13 @@ function draw(): void {
 }
 async function configure(command: EngineCommand): Promise<void> {
   const previousFps = current?.settings.fps
+  const sceneChanged = current !== null && current.scene !== command.scene
+  if (sceneChanged && canvas) transition.capture(canvas, command.transition)
   current = command
-  const desktop = await sources.configure(command.settings.scenes[command.scene], command.settings.audio.desktop, command.settings.fps)
+  widgets.configure(command)
+  let desktop: MediaStream | null
+  try { desktop = await sources.configure(command.settings.scenes[command.scene], command.settings.audio.desktop, command.settings.fps) }
+  finally { if (sceneChanged) transition.begin(performance.now()) }
   audio ??= new AudioMixer()
   await audio.configure(command.settings.audio, desktop)
   if (command.testPattern) audio.testTone()
@@ -79,7 +90,7 @@ window.compositor.onCommand(command => {
       else if (command.type === 'pause') {
         await recorder.stop()
         if (timer !== null) clearTimeout(timer)
-        timer = null; sources.close(); sources = new Sources()
+        timer = null; sources.close(); sources = new Sources(); widgets.close(); transition.close()
         stream?.getTracks().forEach(track => track.stop()); stream = null
         await audio?.close(); audio = null; current = null; clock = new FrameClock(command.settings.fps)
       }

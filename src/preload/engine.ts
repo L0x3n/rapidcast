@@ -13,6 +13,7 @@ const api = Object.freeze<CompositorApi>({
   prepareCapture: id => ipcRenderer.invoke(ENGINE_IPC.capture, id),
   asset: id => ipcRenderer.invoke(ENGINE_IPC.asset, id),
   fault: message => ipcRenderer.send(ENGINE_IPC.fault, message),
-  warning: message => ipcRenderer.send(ENGINE_IPC.warning, message)
+  warning: message => ipcRenderer.send(ENGINE_IPC.warning, message),
+  widgetsFailed: message => ipcRenderer.send(ENGINE_IPC.widgetsFailed, message)
 })
 export function exposeCompositor(): void { contextBridge.exposeInMainWorld('compositor', api) }

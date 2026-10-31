@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC, type RapidCastApi, type StudioState } from '../shared/contracts'
 import { ENGINE_IPC, type EngineState } from '../shared/engine'
 import { exposeCompositor } from './engine'
+import { WIDGET_IPC, type WidgetState } from '../shared/widgets'
 
 const api = Object.freeze<RapidCastApi>({
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
@@ -33,7 +34,20 @@ const api = Object.freeze<RapidCastApi>({
   stopOutput: () => ipcRenderer.invoke(ENGINE_IPC.stop),
   refreshSources: () => ipcRenderer.invoke(ENGINE_IPC.sources),
   importImage: () => ipcRenderer.invoke(ENGINE_IPC.image),
-  revealRecording: () => ipcRenderer.invoke(ENGINE_IPC.reveal)
+  revealRecording: () => ipcRenderer.invoke(ENGINE_IPC.reveal),
+  getWidgets: () => ipcRenderer.invoke(WIDGET_IPC.state),
+  onWidgets: listener => {
+    const handler = (_event: Electron.IpcRendererEvent, state: WidgetState): void => listener(state)
+    ipcRenderer.on(WIDGET_IPC.update, handler)
+    return () => ipcRenderer.removeListener(WIDGET_IPC.update, handler)
+  },
+  addWidget: (id, scene) => ipcRenderer.invoke(WIDGET_IPC.add, { id, scene }),
+  installWidget: code => ipcRenderer.invoke(WIDGET_IPC.install, code),
+  configureWidget: (id, params) => ipcRenderer.invoke(WIDGET_IPC.params, { id, params }),
+  restartWidget: id => ipcRenderer.invoke(WIDGET_IPC.restart, id),
+  removeWidget: id => ipcRenderer.invoke(WIDGET_IPC.remove, id),
+  setTransition: value => ipcRenderer.invoke(WIDGET_IPC.transition, value),
+  copyOverlay: scene => ipcRenderer.invoke(WIDGET_IPC.copy, scene)
 })
 
 if (process.argv.includes('--rapidcast-compositor')) exposeCompositor()

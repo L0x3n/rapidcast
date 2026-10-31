@@ -20,7 +20,6 @@ function inspect(file: string, filter: 'audio' | 'video' | 'decode'): Promise<st
 export async function engineSmoke(window: BrowserWindow, engine: Engine): Promise<void> {
   const artifacts = join(__dirname, '../engine-smoke')
   await mkdir(artifacts, { recursive: true })
-  await engine.initialize()
   engine.testPattern = true
   await engine.preview()
   await until(() => (engine.snapshot().telemetry?.frames ?? 0) > 30)

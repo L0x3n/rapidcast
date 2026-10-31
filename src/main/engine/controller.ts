@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { ENGINE_IPC, defaultEngineSettings, validateEngineSettings, type EngineState, type EngineCommand, type EngineTelemetry, type DeviceChoice } from '../../shared/engine'
 import type { SceneId } from '../../shared/scenes'
+import type { Transition } from '../../shared/widgets'
 import { Encoder, probeNvenc } from './encoder'
 import { configureCapturePermissions, captureSources } from './capture'
 import { Assets } from './assets'
@@ -39,6 +40,9 @@ export class Engine {
   private recovering: Promise<void> | null = null
   private disposing: Promise<void> | null = null
   private scene: SceneId = 'starting'
+  private widgetOrigin = ''
+  private transition: Transition = 'fade'
+  widgetFailure: (message: string) => void = message => this.notice(message)
   readonly assets: Assets
   testPattern = false
 
@@ -65,7 +69,7 @@ export class Engine {
     const window = this.window
     if (!window || window.isDestroyed()) throw new Error('The compositor is not running. Start preview and try again.')
     const id = randomUUID()
-    const command: EngineCommand = { id, type, settings: this.state.settings, scene: this.scene, runId: this.runId, testPattern: this.testPattern }
+    const command: EngineCommand = { id, type, settings: this.state.settings, scene: this.scene, runId: this.runId, testPattern: this.testPattern, widgetOrigin: this.widgetOrigin, transition: this.transition }
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('The compositor did not respond. Stop output and restart preview.')) }, 15000)
       this.pending.set(id, { resolve, reject, timer })
@@ -107,6 +111,10 @@ export class Engine {
     if (this.scene === scene) return
     this.scene = scene
     if (this.state.previewActive) await this.command('configure')
+  }
+  setWidgetRuntime(origin: string, transition: Transition): void {
+    this.widgetOrigin = origin; this.transition = transition
+    if (this.state.previewActive) void this.command('configure').catch(() => this.notice('The widget runtime could not refresh. Restart preview to reconnect it.'))
   }
   async listSources(): Promise<void> { this.update({ sources: await captureSources() }) }
   async prepareCapture(id: string): Promise<void> { await this.selectCapture?.(id) }
