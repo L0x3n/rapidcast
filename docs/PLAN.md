@@ -7,14 +7,14 @@ All times are Europe/Stockholm. The full original request is in [BRIEF.md](BRIEF
 | Phase | Window | Scope | Acceptance | Status |
 | --- | --- | --- | --- | --- |
 | P0 | Sat Oct 31 evening | Rules, durable plan, Electron/React/TypeScript scaffold, MIT license, initial commit | Strict checks, Vitest, production build and actual Electron smoke check pass; ask for public Client ID | Complete |
-| P1 | Sat night | Five real tab layouts, public-client device login, refresh, EventSub, chat/feed, simulator | Linus's chat appears within 2 seconds; simulated events render | Implemented; real-account acceptance pending Client ID/login |
+| P1 | Sat night | Five real tab layouts, public-client device login, refresh, EventSub, chat/feed, simulator | Linus's chat appears within 2 seconds; simulated events render | Implemented; public ID supplied in P8; real-account login/acceptance pending |
 | P2 | Sun Nov 1 morning | 1080p compositor, display/window/camera layers, crop/z-order/opacity, mic/desktop mixer, FFmpeg, RTMP reconnect, recording, health | 10-minute bandwidth test with <1% dropped frames while minimized and fullscreen game runs; short real Twitch stream with synchronized audio | Implemented as beta; local integration verified; real device/Twitch/game acceptance pending |
 | P3 | Sun midday | Worker/OffscreenCanvas runtime, five built-ins, four scenes, fade/swipe, hotkeys, localhost overlay | Simulated follow reaches program; broken/slow widget is disabled without interrupting output; tag v0.1 | Implemented; local native acceptance passed; actual OBS/Twitch/game checks pending |
 | P4 | Sun afternoon/evening | AI providers, generation/repair/preview, prompt editing, screening, suggestion queue, approvals, attribution/chat reply | Second account sends !widget, approve, widget appears on stream in about 60 seconds | Implemented; local native flow passed with a test endpoint; real model/Twitch acceptance pending |
 | P5 | Sun late | Six-step first-run wizard, devices, 15-second bandwidth test, recommendations, style, Repair | Fresh profile reaches ready to go live in under 5 minutes | Implemented; automated fresh local path passed; real human/Twitch five-minute acceptance pending |
 | P6 | Mon Nov 2 morning | JSONL sessions, live charts, history, widget impact, Markdown AI report | Correct metrics and report after a 10-minute test stream | Implemented; ten-minute local/simulator acceptance passed; real Twitch/model checks pending |
 | P7 | Mon late morning | .rcpack export/import, preview before install, sandbox imported code | Export and import on clean profile; scenes/widgets/theme work | Implemented; two-profile native acceptance passed; native dialogs/other-machine/OBS checks pending |
-| P8 | Mon 14:00-20:00 | Fixes only, README, DEVPOST, VIDEO, history scan, clean clone, v1.0 | Reproducible setup, no secrets, release and submission materials ready by 20:00 | Not started |
+| P8 | Mon 14:00-20:00 | Fixes only, README, DEVPOST, VIDEO, history scan, clean clone, v1.0 | Reproducible setup, no secrets, release and submission materials ready by 20:00 | Release candidate prepared; committed clean-clone verification in progress |
 
 Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processing, hard deadline 23:00. P1-P4 are required, P5-P6 preferred, P7 optional. Only consider a community gallery if all other work is complete by Monday 10:00. If engine instability persists Sunday 13:00, mark it beta, make OBS browser sources the main demo path and continue to P3.
 
@@ -50,6 +50,15 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 - Deadline dates follow the brief (November 2, 2026). No claims about external hackathon rules have been independently verified in P0.
 
 ## Verification evidence
+
+### P8, November 1
+
+- Linus supplied the public Twitch Client ID; it is now shipped in config/public.json and Settings can override it. No client secret/token/key was requested or stored in the repository. Verified the original Codex chat ID 01a19363-ba10-7cd0-a5b7-58c1e60e709d using CODEX_THREAD_ID and the Codex app thread metadata, including this P8 turn. Updated submission provenance without inferring identity from attachment/visualization paths.
+- Prepared the Devpost narrative, all requested sections, a timed 180-second shot list/narration and a release/reproduction record with explicit outstanding real-account/model/device checks. Actual repository/video URLs remain user-provided after publication; no remote is configured, nothing has been pushed and no video/Devpost upload has occurred. Retain ENGINE BETA and OBS fallback; no gallery or other new product features.
+- Added Windows portable packaging with Electron Packager 20.3.0, strict production-file allowlisting and retained application/Electron/Chromium/production package/FFmpeg licenses. The ZIP includes its runtime and needs no global Node/FFmpeg. ASAR is off so bundled FFmpeg remains a separate executable. Development packaging resolved two moderate glob/minimatch advisories; scoped build-only overrides to 14.0.2/11.0.1 restore a zero-finding full npm audit. Runtime dependency versions are unchanged.
+- Working candidate passed 220 tests in 28 files, strict production build, full npm audit and a redacted Gitleaks 8.30.1 scan of all eight existing reachable commits. The scanner ZIP was verified against the publisher's checksum. Added repeatable redacted history/tracked-tree scans; generated artifacts remain ignored. No broad secret-rule allowlist was added.
+- The tracked-tree scan's sole initial finding was the intentionally public Twitch application ID. Added one documented AND exception requiring its exact value and config/public.json path, retaining all default rules and scanning tests normally. No actual token, key or client secret was found or added.
+- Built the initial v1.0.0 Windows ZIP and tested its actual extracted executable in a fresh profile. Startup/isolation/encryption, the shipped public ID with no logged-in account, actual widget/FFmpeg recording, separate simulator metrics, history/chart and an explicitly requested fixed-response AI report passed. This is local runtime proof, not Twitch login/delivery or real-model acceptance. The clean-clone script verifies an independent exact committed revision with npm ci and all native tests sequentially, then copies its verified portable release back to out/release.
 
 ### P7, November 1
 
@@ -165,5 +174,5 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 ## Submission tracking
 
 - Working name: RapidCast. Owner: Linus. License: MIT.
-- Original Codex chat/session ID: not yet confirmed. Keep build work in this chat and record the actual identifier for P8, never infer it from unrelated app/visualization paths.
+- Original Codex chat/session ID: 01a19363-ba10-7cd0-a5b7-58c1e60e709d, verified in P8 from the known environment field and Codex app metadata for this active RapidCast chat. All build work remains in this chat.
 - Judging categories are equally weighted per the brief: originality, streamer/chat utility or entertainment, technical quality and use of Codex, design/usability/watchability.

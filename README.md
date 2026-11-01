@@ -2,16 +2,17 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P7, v0.5 portable overlay packs; streaming engine beta.** Export and review/import four-scene .rcpack layouts with widgets, parameters, themes and embedded images. Imported widget configurations pass the existing isolated tests before installation. Guided setup, capture/audio, MP4/Twitch output, OBS overlays, approved viewer ideas and session analytics remain available. Local setup/recording, practice statistics, packs and builtin widgets work without Twitch or AI.
+**v1.0 submission release; streaming engine beta.** Build interactive widgets from a prompt or an approved viewer idea, run four scenes, export portable overlays and inspect local session reports. Imported/generated widget configurations pass isolated tests before publication. The same widgets work as OBS browser sources. Local recording, practice statistics, packs and builtin widgets work without Twitch or AI.
 
-Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
+Linus's public Twitch application ID is included. Connect your own account in Setup. Real-account login/chat latency, real-model quality and the actual Twitch/fullscreen-game/device-sync acceptance still require interactive verification; controlled local tests are documented separately. See [release evidence and remaining checks](docs/RELEASE.md).
+
+For the portable Windows build, extract `RapidCast-1.0.0-windows-x64.zip` and launch `RapidCast.exe`. Keep the whole folder together. It includes Electron and FFmpeg, needs no Node installation and is unsigned. Locally generated artifacts, SHA256SUMS.txt and the source-commit manifest are in `out/release/`; nothing has been uploaded or published by this build.
 
 ## Run on Windows
 
 Requirements: Windows 11, Node.js 24 and npm 11. No OBS, Python, node-gyp or globally installed FFmpeg is needed.
 
 ```powershell
-cd C:\Users\coute\rapidcast
 npm ci
 npm run dev
 ```
@@ -23,7 +24,7 @@ npm run build
 npm start
 ```
 
-This builds a runnable local Electron app under `out/`. It does not yet create a Windows installer. Exit the window and stop the development terminal with Ctrl+C when finished.
+Run these commands from the repository folder. This builds a local Electron app under `out/`. To create the portable Windows ZIP, run `npm run package:win`, then `npm run smoke:portable`. There is no installer or signing step. Exit the window and stop the development terminal with Ctrl+C when finished.
 
 ## Verify
 
@@ -39,6 +40,9 @@ npm run smoke:stats
 npm run smoke:stats:long
 npm run smoke:packs
 npm run check:rtmp
+npm audit
+npm run check:secrets
+npm run check:clean-clone
 ```
 
 `build` includes strict TypeScript checks. `smoke` opens a real Electron window with a temporary profile, visits all five tabs, fires follow/chat simulations, switches scenes, rejects an invalid Client ID, tests an actual safeStorage encryption round trip, and checks OS sandbox and renderer Node isolation. It also attempts to save `out/smoke.png`; unavailable screenshot capture produces a separate warning after the startup checks pass. It does not log in or contact Twitch. `npm run test:watch` runs Vitest interactively.
@@ -59,14 +63,14 @@ Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine t
 
 ## Configuration and security
 
-The public Twitch Client ID belongs in `config/public.json` and is currently blank pending Linus's ID. A local Settings override is available. A client secret is never needed. Do not put tokens, stream keys or AI keys in that file or paste them into chat.
+The public Twitch Client ID is shipped in `config/public.json`; a local Settings override is available. It is intentionally public. RapidCast uses a Public application and device login; a client secret is never needed. Do not put tokens, stream keys or AI keys in that file or paste them into chat.
 
 Twitch tokens and AI keys are encrypted through Electron safeStorage in the main process under the OS app data directory. There is no plaintext fallback. Settings are JSON; encrypted credentials are `twitch.bin` and `ai-key.bin`. The renderer has no Node access and only specific validated IPC actions. No saved key, token or private device code is returned to it. Widgets receive public events and host-fetched images, run in individual Workers in a separate renderer process, and cannot use network or eval. Static validation, enforced Worker CSP and host watchdogs work together.
 
 ## Connect Twitch
 
 1. [Register a Twitch application](https://dev.twitch.tv/docs/authentication/register-app/) with Client Type **Public**. Device login does not require a callback server or client secret. If the console requires a redirect URL, register `http://localhost`; this flow does not use it.
-2. Open Settings, paste the public Client ID and click **Save Client ID**. Changing the ID disconnects the previous account.
+2. Use the included public Client ID, or open Settings and Save Client ID to use your own Public Twitch application. Changing the ID disconnects the previous account.
 3. Click **Connect Twitch**. RapidCast shows a large code, opens Twitch in your browser and polls until you authorize. Log in and approve in the browser yourself. You can cancel or reopen the activation page.
 4. Verify **Chat and live events are connected**. Settings lists enabled, unavailable and revoked subscriptions. Non-Affiliate channels retain chat, follows, raids and online/offline events; monetized event types show their requirements.
 5. Send a message on your Twitch channel and watch it appear in Live. The composer sends as your connected account. Own messages are marked YOU and ignored by the !widget suggestion parser.
@@ -167,6 +171,10 @@ Uses Electron, electron-vite, Vite, React, TypeScript and Vitest. The lockfile p
 ## Build process and license
 
 Linus directs scope, design and real stream testing. Codex implements the app in the original project chat, runs checks and records phase decisions in the plan. Each phase ends in a local commit. Nothing is pushed without Linus's instruction.
+
+Original Codex chat/session ID: `01a19363-ba10-7cd0-a5b7-58c1e60e709d`, verified from the current chat environment and Codex app metadata. The project progressed through Twitch, compositor/audio/output, isolated widgets, approved AI suggestions, setup, statistics, sharing and release checks in that same chat. The application code is new project work; dependencies and prebuilt binaries are separately licensed.
+
+Submission material: [Devpost narrative](docs/DEVPOST.md), [three-minute video shot list and narration](docs/VIDEO.md), [release/reproduction record](docs/RELEASE.md). The actual public repository URL, recorded/uploaded video and final Devpost submission are still user actions. The optional gallery and Codex SDK/ChatGPT sign-in preset are deferred.
 
 MIT, copyright 2026 Linus. See [LICENSE](LICENSE).
 

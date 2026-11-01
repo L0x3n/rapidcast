@@ -32,6 +32,7 @@ import { registerPackIpc } from './packs/ipc'
 import { PACK_IPC } from '../shared/packs'
 import { recoverPackTransaction } from './packs/files'
 import { packsSmoke } from './packs/smoke'
+import { resolveTwitchClientId } from '../shared/config'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
@@ -146,6 +147,11 @@ async function createWindow(): Promise<void> {
 
   if (smokeTest) {
     await runSmoke(window)
+    if (process.argv.includes('--rapidcast-release-test')) {
+      await studio.initialize()
+      if (!resolveTwitchClientId() || studio.snapshot().twitch.clientId !== resolveTwitchClientId() || studio.snapshot().twitch.account) throw new Error('The release did not load its public Client ID into a fresh, signed-out profile.')
+      console.log('RapidCast release smoke passed: shipped public Client ID, fresh signed-out profile and isolated desktop startup.')
+    }
     if (process.argv.includes('--rapidcast-engine-test') && engine) await engineSmoke(window, engine)
     if (process.argv.includes('--rapidcast-widget-test') && engine && studio && widgets) await widgetSmoke(window, engine, studio, widgets)
     if (process.argv.includes('--rapidcast-ai-test') && ai && engine && studio && widgets) await aiSmoke(window, ai, engine, widgets, studio)

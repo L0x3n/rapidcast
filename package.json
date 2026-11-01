@@ -1,6 +1,6 @@
 {
   "name": "rapidcast",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "An AI-native Twitch studio where chat helps build the stream.",
   "private": true,
   "license": "MIT",
@@ -26,7 +26,11 @@
     "smoke:stats": "node scripts/smoke.mjs --stats",
     "smoke:stats:long": "node scripts/smoke.mjs --stats-long",
     "smoke:packs": "node scripts/check-packs.mjs",
-    "check:rtmp": "node scripts/check-rtmp.mjs"
+    "check:rtmp": "node scripts/check-rtmp.mjs",
+    "check:secrets": "node scripts/scan-secrets.mjs",
+    "package:win": "node scripts/package-win.mjs",
+    "smoke:portable": "node scripts/smoke-portable.mjs",
+    "check:clean-clone": "node scripts/check-clean-clone.mjs"
   },
   "dependencies": {
     "acorn": "8.19.0",
@@ -35,7 +39,14 @@
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
+  "overrides": {
+    "@electron/asar": {
+      "glob": "14.0.2",
+      "minimatch": "11.0.1"
+    }
+  },
   "devDependencies": {
+    "@electron/packager": "20.3.0",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

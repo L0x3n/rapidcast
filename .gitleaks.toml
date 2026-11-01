@@ -1,0 +1,11 @@
+title = "RapidCast release secret scan"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Linus's intentionally public Twitch Client ID in public configuration only"
+condition = "AND"
+paths = ['''(^|[\\/])config[\\/]public\.json$''']
+regexTarget = "secret"
+regexes = ['''^cfczqddkub0yizndrqwybfquabnnpx$''']

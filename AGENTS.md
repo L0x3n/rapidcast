@@ -41,6 +41,11 @@ npm run smoke:stats
 npm run smoke:stats:long
 npm run smoke:packs
 npm run check:rtmp
+npm audit
+npm run check:secrets
+npm run check:clean-clone
+npm run package:win
+npm run smoke:portable
 npm start
 ```
 
@@ -52,6 +57,7 @@ npm start
 - P5 `smoke:setup` verifies fresh local onboarding, explicit own-window selection, discovery without camera/mic capture, full 15-second minimized encoding, 720p H.264/AAC, cancellation/locks, strict style data/four previews, saved readiness and Repair. It must not call local completion a real Twitch/network or human five-minute acceptance. Test windows may need show/restore/focus before Windows lists their own source; never substitute another open RapidCast window. See `docs/P5-TESTS.md`.
 - P6 `smoke:stats` verifies short local session metrics, an actual visible widget witness, duplicate-client/preview exclusion, JSONL replay, charts and fixed-response AI Markdown. `smoke:stats:long` runs ten actual minutes minimized and checks a complete impact window. Run native tests sequentially. These are simulator/local-output checks, not real Twitch/viewer/model acceptance; see `docs/P6-TESTS.md`.
 - P7 `smoke:packs` runs two sequential Electron processes with separate temporary profiles. It exports the real Studio layout, then reviews/tests/installs on a clean profile, checks exact imported parameters/dimensions, real Worker failure, network rejection, cancellation/leases, four-scene/theme/image/credit persistence and recorded program pixels. File selections are fixture-injected; OS dialogs and a real shared pack remain manual checks in `docs/P7-TESTS.md`. Artifacts are ignored out/packs-smoke.
+- P8 `check:secrets` verifies the pinned official Gitleaks ZIP checksum, scans all reachable refs plus tracked working files with full redaction, and saves only redacted reports under out/security. Stage new files first. `check:clean-clone` requires a clean committed tree and verifies an independent clone with npm ci, all native smokes sequentially, audit, packaging and an extracted-ZIP smoke. Portable packaging uses an explicit production-file allowlist and retains licenses. See RELEASE.md for evidence, manual limits and the local-only v1.0 gate.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -103,4 +109,5 @@ npm start
 
 - P3 tags v0.1 after its acceptance test; P8 tags v1.0 only after release checks.
 - P8 includes README, DEVPOST, 3-minute VIDEO shot list, git-history secret scan and clean-clone test. No secrets in submission artifacts.
+- Linus supplied the public application ID in P8; it is now shipped in config/public.json. Do not describe it as missing. Account login and real hardware/model/Twitch checks remain separate. The verified original Codex chat ID is 01a19363-ba10-7cd0-a5b7-58c1e60e709d. Never create a public chat share or publish repository/video/submission without authorization.
 - Judges may only see the video and text. Prioritize visible chat-to-widget interaction, legibility, reliability and honest status.
