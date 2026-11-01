@@ -48,6 +48,7 @@ export class Storage {
     catch { throw new Error('Output settings could not be loaded. Rename engine.json in the app data folder and restart.') }
   }
   saveEngineSettings(value: EngineSettings): Promise<void> { return this.atomic('engine.json', JSON.stringify(value, null, 2)) }
+  async flush(): Promise<void> { await this.writes }
 
   async readTokens(): Promise<TokenSet | null> {
     const encrypted = await this.read('twitch.bin')

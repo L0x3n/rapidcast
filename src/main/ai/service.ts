@@ -101,6 +101,7 @@ export class AiService {
     } finally { if (this.utility === controller) this.utility = null }
   }
   generate(request: GenerateRequest, suggestion?: Suggestion): void {
+    if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before building a widget.')
     if (this.utility) throw new Error('Wait for the AI connection/style check to finish before building a widget.')
     if (busy(this.state)) throw new Error('Finish or cancel the current widget build first.')
     const prompt = ideaText(request.prompt, 2000)
@@ -151,6 +152,7 @@ export class AiService {
     this.discardDraft(); this.state.job = { ...this.state.job, phase: 'cancelled', message: 'Build cancelled. Existing scene widgets are unchanged.' }; this.changed(true)
   }
   async publishDraft(id: string): Promise<void> {
+    if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before publishing a widget.')
     const draft = this.state.draft
     if (!draft || draft.id !== id || this.state.job.phase !== 'ready') throw new Error('Choose the current tested preview before publishing.')
     const suggestion = this.store.suggestions.find(item => item.id === draft.suggestionId)

@@ -39,6 +39,7 @@ npm run smoke:ai
 npm run smoke:setup
 npm run smoke:stats
 npm run smoke:stats:long
+npm run smoke:packs
 npm run check:rtmp
 npm start
 ```
@@ -50,6 +51,7 @@ npm start
 - P4 `smoke:ai` uses a marked local test endpoint and real Electron/Workers/FFmpeg. It checks encrypted key restore/no secret in public state, screening/approval, two repairs, three-second preflight, visible program/credit/events, prompt replacement, automatic publication after approval, cancellation and continuous recording. It is not a real-model quality/latency or second-account Twitch acceptance. See `docs/P4-TESTS.md`; artifacts in ignored out/ai-smoke.
 - P5 `smoke:setup` verifies fresh local onboarding, explicit own-window selection, discovery without camera/mic capture, full 15-second minimized encoding, 720p H.264/AAC, cancellation/locks, strict style data/four previews, saved readiness and Repair. It must not call local completion a real Twitch/network or human five-minute acceptance. Test windows may need show/restore/focus before Windows lists their own source; never substitute another open RapidCast window. See `docs/P5-TESTS.md`.
 - P6 `smoke:stats` verifies short local session metrics, an actual visible widget witness, duplicate-client/preview exclusion, JSONL replay, charts and fixed-response AI Markdown. `smoke:stats:long` runs ten actual minutes minimized and checks a complete impact window. Run native tests sequentially. These are simulator/local-output checks, not real Twitch/viewer/model acceptance; see `docs/P6-TESTS.md`.
+- P7 `smoke:packs` runs two sequential Electron processes with separate temporary profiles. It exports the real Studio layout, then reviews/tests/installs on a clean profile, checks exact imported parameters/dimensions, real Worker failure, network rejection, cancellation/leases, four-scene/theme/image/credit persistence and recorded program pixels. File selections are fixture-injected; OS dialogs and a real shared pack remain manual checks in `docs/P7-TESTS.md`. Artifacts are ignored out/packs-smoke.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -76,6 +78,7 @@ npm start
 - AI keys are write-only IPC input and encrypted in ai-key.bin, associated with their exact base URL. Never return them in AI state or model lists, echo provider error bodies, follow credential-bearing redirects or reuse a key after endpoint change. ai.json holds nonsecret config and a bounded suggestion queue. No AI build publishes before its isolated three-second test passes; at most two code repairs. Real viewer publication requires approval, even with auto-publish enabled. Never send simulator acknowledgments to Twitch.
 - Each widget runs in a separate Worker with OffscreenCanvas, no DOM, Node, network or tokens. Static checks alone are not isolation: enforce runtime network restrictions and watchdog termination. Widget failure must never stop the stream.
 - Validate imported packs before installation. Imported and generated code always goes through the same sandbox pipeline.
+- P7 packs are strict versioned JSON with embedded, decoded/dimension-bounded PNGs only; never accept archive paths, URLs, host config or unused code. Whitelist export fields and unbind/hide capture layers. Review runs no widget code. Test every unique code/params/size combination, including hidden instances, before explicit full-layout replacement. No AI repairs on imported code. Hold the pack operation lease across tests/install, block competing program/setup/publish mutations and defer runtime widget persistence. Stage the three fixed layout files with pack-transaction.json rollback; recover before engine/widget/setup initialization. Preserve host audio/output/credentials and invalidate setup approvals. Never auto-start capture/output after import.
 
 ## Twitch and engine gotchas
 

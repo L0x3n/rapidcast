@@ -55,9 +55,9 @@ export class Setup {
   snapshot(): SetupState { return { ...this.store.data, revision: this.revision, secureStorage: this.secure, checks: this.checks(), recommendation: this.store.data.benchmark ? recommendOutput(this.store.data.benchmark) : null, task: this.task, themeDraft: this.themeDraft, diagnostics: this.diagnostics } }
   private changed(): void { if (!this.closed) { this.revision++; this.publish(this.snapshot()) } }
   observed(): void { this.changed() }
-  private idle(): void { if (this.controller) throw new Error('Finish or cancel the current setup task first.'); if (this.engine.snapshot().mode) throw new Error('Stop current output before changing setup.') }
+  private idle(): void { if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before changing setup.'); if (this.controller) throw new Error('Finish or cancel the current setup task first.'); if (this.engine.snapshot().mode) throw new Error('Stop current output before changing setup.') }
   private async saved(): Promise<void> { await this.store.save(); this.changed() }
-  async step(step: number, goal: SetupGoal): Promise<void> { this.store.data.step = step; this.store.data.goal = goal; await this.saved() }
+  async step(step: number, goal: SetupGoal): Promise<void> { if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before changing setup.'); this.store.data.step = step; this.store.data.goal = goal; await this.saved() }
   async discover(): Promise<void> {
     this.idle(); this.task = { phase: 'discovering', seconds: 0, message: 'Finding display/window, camera and microphone choices. Capture starts only after Apply.' }; this.changed()
     try { await this.engine.listSources(); await this.engine.refreshDevices(); this.task = { phase: 'done', seconds: 0, message: 'Device choices refreshed. Pick what to capture, then Apply.' } }
@@ -80,6 +80,7 @@ export class Setup {
     this.store.data.completed = false; await this.saved()
   }
   async confirm(kind: 'visual' | 'audio' | 'inspector', checked: boolean): Promise<void> {
+    if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before changing setup.')
     if (kind === 'visual') this.store.data.visualSignature = checked ? visualSignature(this.engine.snapshot().settings) : ''
     if (kind === 'audio') this.store.data.audioSignature = checked ? audioSignature(this.engine.snapshot().settings) : ''
     if (kind === 'inspector') {

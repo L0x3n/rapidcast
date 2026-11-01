@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P6, v0.4 session analytics; streaming engine beta.** Live charts, local JSONL history, visible widget triggers, two-minute impact comparisons and optional AI Markdown reports now join guided setup, capture/audio, MP4/Twitch output, isolated widgets, OBS overlays and approved viewer ideas. Local setup/recording, practice statistics and builtin widgets work without Twitch or AI.
+**Current stage: P7, v0.5 portable overlay packs; streaming engine beta.** Export and review/import four-scene .rcpack layouts with widgets, parameters, themes and embedded images. Imported widget configurations pass the existing isolated tests before installation. Guided setup, capture/audio, MP4/Twitch output, OBS overlays, approved viewer ideas and session analytics remain available. Local setup/recording, practice statistics, packs and builtin widgets work without Twitch or AI.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -37,6 +37,7 @@ npm run smoke:ai
 npm run smoke:setup
 npm run smoke:stats
 npm run smoke:stats:long
+npm run smoke:packs
 npm run check:rtmp
 ```
 
@@ -53,6 +54,8 @@ Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine t
 `smoke:setup` verifies a fresh six-step local route, device discovery without capture, explicit selection of only its own test window, cancellation/locks, a full 15-second minimized encoder sample, actual 720p H.264/AAC output, strict theme JSON/four previews, saved readiness and nondestructive Repair. It proves that local results cannot unlock Twitch. It uses a fixed-response style endpoint and no physical camera/mic/system-audio capture or real Twitch connection. Screenshots, clips and report are in `out/setup-smoke/`; see [P5 tests](docs/P5-TESTS.md). Automated local completion is not evidence that a person completed the real Twitch route within five minutes.
 
 `smoke:stats` checks automatic session boundaries, separate Twitch/simulator metrics, one actual widget trigger without duplicates from extra overlays, history replay, Chart.js rendering and an explicitly requested anonymous AI Markdown report. `smoke:stats:long` runs the same path with ten actual minutes of minimized local H.264/AAC recording and a complete two-minute before/after window. Both use simulator events and a fixed-response loopback AI endpoint. They do not verify real Twitch delivery or model quality. Run all native/GPU checks sequentially. Evidence is in `out/stats-smoke/`; see [P6 tests](docs/P6-TESTS.md).
+
+`smoke:packs` exports through the actual Studio UI, exits, and launches a separate clean Electron profile to review/test/install the result. It checks code/parameter/dimension testing, a real Worker failure with imported parameters, static network rejection, cancellation/locks, all four scene layouts, theme/credit/image persistence, program pixels and H.264/AAC recording. The harness chooses owned fixture files instead of displaying OS file dialogs. Evidence is in `out/packs-smoke/`; see [P7 tests](docs/P7-TESTS.md). It does not log in, call an AI provider, capture physical devices or start Twitch/OBS output.
 
 ## Configuration and security
 
@@ -108,6 +111,18 @@ In Studio, copy **Follow active scene** or a fixed scene's OBS URL. Add an OBS B
 
 Advanced users can install a widget ES module through Studio's code panel. Every installation uses the same validator and Worker isolation. Errors or deadlines produce a visible WIDGET PAUSED badge; output continues. Edit parameters/restart after fixing a widget, or remove it. A runtime-process failure pauses widgets together and Restart reconnects the runtime. See [the widget API and limits](docs/P3-TESTS.md).
 
+## Share and import overlay packs
+
+In Studio, expand **Overlay packs**. Enter a name, optional author and description, then **Export current layout**. Choose where to save the .rcpack file. It includes all four scene layouts, placed widget code/parameters/credits, transition, optional theme and embedded PNG images. Its thumbnail is a layout diagram, not a screenshot of your capture. Scene text, widget source and image pixels are shared; review them before distributing the file.
+
+Capture identities and window titles become hidden, unbound display/camera placeholders. Account credentials, AI/provider settings, audio devices, output settings, ports, hotkeys, stats and chat history are omitted. PNG/JPEG layer images are normalized to PNG and resized to fit 1920×1080; if an existing WebP or another image cannot be decoded, convert it to PNG/JPEG first. Packs support 16 MB total, 16 images (2 MB each, 8 MB combined), a 512 KB PNG thumbnail, 32 widget definitions/instances, eight widgets and 24 total layers per scene. Only used code/images are included.
+
+Choose **Open pack to review**. Inspect its metadata, author thumbnail, four generated layer diagrams and widget source/credits. Author information and the provided thumbnail are unverified. No widget code runs while opening/reviewing the file. Stop engine output before testing/installing; stop OBS yourself before replacing layouts used by its browser sources. **Test in sandbox** checks every unique code/parameter/size combination for three seconds, including hidden widgets. Cancel keeps the current layout. Invalid code or a failing configuration prevents installation; imports are never silently rewritten or repaired by AI.
+
+After all tests pass, **Replace four scenes** explicitly installs the reviewed snapshot. Export your existing layout first to keep it. Installation stops compositor preview, replaces all placed layers/widgets, retains the existing widget library and your host output/audio settings, stores the imported theme, and clears old setup approvals. It does not start capture or streaming. Select your own capture sources, start preview, inspect all scenes and repeat Setup picture/audio/performance checks. Scene/program OBS URLs stay the same; widget-specific URLs change and must be copied again.
+
+Layout files are saved as a group with a private rollback journal. A save/application failure restores the prior files; an interrupted process is recovered before the next startup loads its settings. The journal contains only previous engine/widget/setup files and is never included in a shared pack. Newly staged PNG files may remain unused after a failed import. Imported widgets retain Worker/CSP/watchdog isolation at runtime; passing a short test is not a guarantee of permanent correctness. See [format, checks and manual acceptance](docs/P7-TESTS.md). The optional community gallery is not included.
+
 ## AI Studio
 
 1. In Settings, choose OpenAI, OpenRouter, Ollama, LM Studio or Custom. Enter the OpenAI-compatible base URL, optional API key and a text model ID. Save, List models, select an ID, Save again, then Test connection. Remote URLs require HTTPS; HTTP loopback is allowed. A blank key keeps the saved key only for the same endpoint. Changing endpoints clears it.
@@ -137,6 +152,7 @@ Session journals and reports live in Electron userData under `sessions/`; `stats
 - `src/main`: privileged desktop services.
 - `src/main/ai`: provider transport, encrypted settings, generation/repair, isolated testing and suggestion approvals.
 - `src/main/stats`: bounded session journals, recovery, history and measured/AI reports.
+- `src/main/packs`: portable export, bounded review, sandbox configuration tests and transactional installation.
 - `src/preload`: typed, narrow bridge into the UI.
 - `src/renderer`: React studio UI.
 - `src/overlay`: shared browser-source/isolated widget host.

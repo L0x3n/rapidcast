@@ -6,6 +6,7 @@ import type { WidgetApi } from './widgets'
 import type { AiApi } from './ai'
 import type { SetupApi } from './setup'
 import type { StatsApi } from './stats'
+import type { PackApi } from './packs'
 
 export interface AppInfo {
   name: string
@@ -15,7 +16,7 @@ export interface AppInfo {
   twitchClientConfigured: boolean
 }
 
-export interface RapidCastApi extends EngineUiApi, WidgetApi, AiApi, SetupApi, StatsApi {
+export interface RapidCastApi extends EngineUiApi, WidgetApi, AiApi, SetupApi, StatsApi, PackApi {
   getAppInfo(): Promise<AppInfo>
   getStudio(): Promise<StudioState>
   onStudio(listener: (state: StudioState) => void): () => void

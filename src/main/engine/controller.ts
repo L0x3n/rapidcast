@@ -3,7 +3,7 @@ import { appendFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { randomUUID } from 'node:crypto'
-import { ENGINE_IPC, defaultEngineSettings, validateEngineSettings, type EngineState, type EngineCommand, type EngineTelemetry, type DeviceChoice } from '../../shared/engine'
+import { ENGINE_IPC, defaultEngineSettings, validateEngineSettings, type EngineState, type EngineSettings, type EngineCommand, type EngineTelemetry, type DeviceChoice } from '../../shared/engine'
 import type { SceneId } from '../../shared/scenes'
 import type { Transition } from '../../shared/widgets'
 import { Encoder, probeNvenc } from './encoder'
@@ -47,6 +47,7 @@ export class Engine {
   testPattern = false
   setupTestActive = false
   setupRepairActive = false
+  packOperationActive = false
 
   constructor(private readonly storage: Storage, private readonly directory: string, private readonly recordings: string,
     private readonly targetFor: (test: boolean) => Promise<string>, private readonly publish: (state: EngineState) => void) {
@@ -103,6 +104,7 @@ export class Engine {
     }
   }
   async configure(input: unknown): Promise<void> {
+    if (this.packOperationActive) throw new Error('Finish or cancel the pack task before changing the program.')
     if (this.setupTestActive) throw new Error('Finish or cancel the setup test before changing the program.')
     const settings = validateEngineSettings(input)
     if (this.wantOutput && (settings.resolution !== this.state.settings.resolution || settings.fps !== this.state.settings.fps || settings.bitrate !== this.state.settings.bitrate || settings.encoder !== this.state.settings.encoder || settings.recordWhileLive !== this.state.settings.recordWhileLive)) throw new Error('Stop output before changing resolution, FPS, bitrate, encoder or recording settings.')
@@ -111,6 +113,7 @@ export class Engine {
     if (this.state.previewActive) await this.command('configure')
   }
   async setScene(scene: SceneId): Promise<void> {
+    if (this.packOperationActive) throw new Error('Finish or cancel the pack task before switching scenes.')
     if (this.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.')
     if (this.scene === scene) return
     this.scene = scene
@@ -126,6 +129,7 @@ export class Engine {
   async prepareCapture(id: string): Promise<void> { await this.selectCapture?.(id) }
   devices(cameras: DeviceChoice[], microphones: DeviceChoice[]): void { this.update({ cameras, microphones }) }
   async preview(): Promise<void> {
+    if (this.packOperationActive) throw new Error('Finish or cancel the pack task before starting preview.')
     if (this.recovering) await this.recovering
     if (this.state.previewActive) return
     await this.ensureWindow()
@@ -158,6 +162,7 @@ export class Engine {
     if (data.byteLength < 200000) this.update({ preview: `data:image/jpeg;base64,${Buffer.from(data).toString('base64')}` })
   }
   async startOutput(mode: 'record' | 'test' | 'live', privateTarget?: string, fromSetup = false): Promise<void> {
+    if (this.packOperationActive) throw new Error('Finish or cancel the pack task before starting output.')
     if (this.setupRepairActive) throw new Error('Wait for the setup repair checks to finish before starting output.')
     if (this.setupTestActive && !fromSetup) throw new Error('Finish or cancel the setup test before starting another output.')
     if (this.wantOutput || this.stopping) throw new Error('Output is already starting or running. Stop it first.')
@@ -285,6 +290,11 @@ export class Engine {
     this.blocker = null
   }
   async revealRecording(): Promise<void> { if (this.state.recordingPath) shell.showItemInFolder(this.state.recordingPath) }
+  async flushSettings(): Promise<void> { await this.storage.flush() }
+  adoptPack(settings: EngineSettings): void {
+    if (!this.packOperationActive || this.state.mode || this.state.previewActive) throw new Error('Stop output and preview before installing a pack.')
+    this.update({ settings: validateEngineSettings(settings), message: 'Layout installed. Bind your capture placeholders, then start preview and rerun readiness checks.' })
+  }
   async dispose(): Promise<void> {
     if (this.disposing) return this.disposing
     this.disposing = (async () => {

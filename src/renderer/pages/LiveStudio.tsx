@@ -5,6 +5,7 @@ import { LayerControls } from '../engine-controls/Layers'
 import { AudioControls } from '../engine-controls/Audio'
 import { TransitionControl, WidgetLibrary } from '../WidgetControls'
 import { AiBuilder, SuggestionQueue } from '../AiStudio'
+import { PacksPanel } from '../packs/PacksPanel'
 
 export function LivePage(props: PageProps): React.JSX.Element {
   const { state } = props
@@ -26,6 +27,7 @@ export function LivePage(props: PageProps): React.JSX.Element {
 export function StudioPage(props: PageProps): React.JSX.Element {
   return <div data-page="studio" className="studio-layout"><div className="main-column">
     <AiBuilder {...props} />
+    <PacksPanel {...props} />
     <SceneSwitcher {...props} /><WidgetLibrary {...props} />
   </div><div className="side-column"><SuggestionQueue {...props} /><Simulator {...props} /><section className="panel"><PanelTitle title="Test events" /><EventFeed events={props.state.events.filter(e => e.source === 'simulator')} compact /></section></div></div>
 }

@@ -6,6 +6,7 @@ import { WIDGET_IPC, type WidgetState } from '../shared/widgets'
 import { AI_IPC, type AiState } from '../shared/ai'
 import { SETUP_IPC, type SetupState } from '../shared/setup'
 import { STATS_IPC, type StatsState } from '../shared/stats'
+import { PACK_IPC, type PackState } from '../shared/packs'
 
 const api = Object.freeze<RapidCastApi>({
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
@@ -89,7 +90,14 @@ const api = Object.freeze<RapidCastApi>({
   cancelStatsReport: () => ipcRenderer.invoke(STATS_IPC.cancel),
   copyStatsReport: () => ipcRenderer.invoke(STATS_IPC.copy),
   revealStatsReport: () => ipcRenderer.invoke(STATS_IPC.reveal),
-  setAutoStatsReport: enabled => ipcRenderer.invoke(STATS_IPC.auto, enabled)
+  setAutoStatsReport: enabled => ipcRenderer.invoke(STATS_IPC.auto, enabled),
+  getPacks: () => ipcRenderer.invoke(PACK_IPC.state),
+  onPacks: listener => { const handler = (_event: Electron.IpcRendererEvent, state: PackState): void => listener(state); ipcRenderer.on(PACK_IPC.update, handler); return () => ipcRenderer.removeListener(PACK_IPC.update, handler) },
+  exportPack: input => ipcRenderer.invoke(PACK_IPC.export, input),
+  openPack: () => ipcRenderer.invoke(PACK_IPC.open),
+  testPack: id => ipcRenderer.invoke(PACK_IPC.test, id),
+  installPack: id => ipcRenderer.invoke(PACK_IPC.install, id),
+  cancelPack: () => ipcRenderer.invoke(PACK_IPC.cancel)
 })
 
 if (process.argv.includes('--rapidcast-compositor')) exposeCompositor()

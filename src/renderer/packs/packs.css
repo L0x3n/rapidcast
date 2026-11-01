@@ -1,0 +1,25 @@
+.pack-panel > summary { display: flex; justify-content: space-between; align-items: center; gap: 15px; cursor: pointer; list-style: none; }
+.pack-panel > summary strong { font-size: 20px; }
+.pack-panel > summary .eyebrow { font-size: 9px; margin-bottom: 8px; color: var(--accent); }
+.pack-panel[open] > summary { margin-bottom: 22px; }
+.pack-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 14px; }
+.pack-export { border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.pack-note { font-size: 11px; margin: 14px 0 0; }
+.pack-panel .button-row { flex-wrap: wrap; gap: 10px; }
+.pack-status { padding: 18px 0; }
+.pack-status > strong { color: var(--accent); font: 11px Consolas, monospace; }
+.pack-status p { margin: 8px 0 0; }
+.pack-review { border-top: 1px solid var(--line); padding-top: 22px; }
+.pack-review-title { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.pack-review-title .offline-badge { white-space: nowrap; font-size: 8px; }
+.pack-preview-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; margin: 22px 0; }
+.pack-preview-row img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: contain; border-radius: 6px; background: #0b0d10; }
+.pack-preview-row small { display: block; color: var(--muted); line-height: 1.6; margin-top: 8px; font-size: 10px; }
+.pack-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pack-scenes svg { display: block; width: 100%; border-radius: 6px; margin-top: 8px; overflow: hidden; }
+.pack-scenes span { font: 10px Consolas, monospace; text-transform: uppercase; color: var(--accent); }
+.pack-source { margin: 22px 0; padding: 15px; background: #0b1016; border: 1px solid var(--line); border-radius: 6px; }
+.pack-source summary { cursor: pointer; line-height: 1.8; }
+.pack-source details { margin-top: 14px; }
+.pack-source pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.7 Consolas, monospace; color: #bfccdb; }
+@media (max-width: 1220px) { .pack-preview-row { grid-template-columns: 1fr; } .pack-review-title { flex-wrap: wrap; } }

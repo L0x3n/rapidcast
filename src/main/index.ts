@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, globalShortcut, dialog } from 'electron'
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -27,9 +27,16 @@ import { Stats } from './stats/service'
 import { registerStatsIpc } from './stats/ipc'
 import { STATS_IPC } from '../shared/stats'
 import { statsSmoke } from './stats/smoke'
+import { Packs } from './packs/service'
+import { registerPackIpc } from './packs/ipc'
+import { PACK_IPC } from '../shared/packs'
+import { recoverPackTransaction } from './packs/files'
+import { packsSmoke } from './packs/smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
+const packExportTest = smokeTest && process.argv.includes('--rapidcast-pack-export')
+const packImportTest = smokeTest && process.argv.includes('--rapidcast-pack-import')
 if (smokeTest && smokeProfile) app.setPath('userData', smokeProfile)
 app.setName('RapidCast')
 app.commandLine.appendSwitch('site-per-process')
@@ -39,6 +46,7 @@ let widgets: Widgets | null = null
 let ai: AiService | null = null
 let setup: Setup | null = null
 let stats: Stats | null = null
+let packs: Packs | null = null
 let quitting = false
 let shutdown: Promise<void> | null = null
 let lastScene = 'starting'
@@ -105,7 +113,7 @@ async function createWindow(): Promise<void> {
   }
   registerAiIpc(ai, window, rendererUrl)
   if (!setup) { setup = new Setup(app.getPath('userData'), engine, studio, widgets, ai, state => { if (!window.isDestroyed()) window.webContents.send(SETUP_IPC.update, state) }); await setup.initialize() }
-  studio.sceneGuard = () => { if (engine?.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.') }
+  studio.sceneGuard = () => { if (engine?.packOperationActive) throw new Error('Finish or cancel the pack task before switching scenes.'); if (engine?.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.') }
   registerSetupIpc(setup, window, rendererUrl)
   if (!stats) {
     stats = new Stats(app.getPath('userData'), engine, studio, ai, state => { if (!window.isDestroyed()) window.webContents.send(STATS_IPC.update, state) })
@@ -114,6 +122,11 @@ async function createWindow(): Promise<void> {
     widgets.triggerOverflow = () => stats?.limit('trigger-overflow')
   }
   registerStatsIpc(stats, window, rendererUrl)
+  if (!packs) packs = new Packs(app.getPath('userData'), engine, widgets, setup, ai, app.getVersion(), {
+    open: async () => { if (packImportTest) return join(__dirname, '../packs-smoke/selected.rcpack'); const result = await dialog.showOpenDialog(window, { title: 'Review a RapidCast overlay pack', properties: ['openFile'], filters: [{ name: 'RapidCast overlay pack', extensions: ['rcpack'] }] }); return result.canceled ? null : result.filePaths[0] ?? null },
+    save: async name => { if (packExportTest) return join(__dirname, '../packs-smoke/portable.rcpack'); const result = await dialog.showSaveDialog(window, { title: 'Export scenes, widget code, text and embedded images', defaultPath: `${name}.rcpack`, filters: [{ name: 'RapidCast overlay pack', extensions: ['rcpack'] }] }); return result.canceled ? null : result.filePath ?? null }
+  }, state => { if (!window.isDestroyed()) window.webContents.send(PACK_IPC.update, state) })
+  registerPackIpc(packs, window, rendererUrl)
   window.on('closed', () => app.quit())
 
   ipcMain.removeHandler(IPC.appInfo)
@@ -138,6 +151,7 @@ async function createWindow(): Promise<void> {
     if (process.argv.includes('--rapidcast-ai-test') && ai && engine && studio && widgets) await aiSmoke(window, ai, engine, widgets, studio)
     if (process.argv.includes('--rapidcast-setup-test') && setup && engine && ai && stats) await setupSmoke(window, setup, engine, ai, stats)
     if (process.argv.includes('--rapidcast-stats-test') && stats && engine && studio && widgets) await statsSmoke(window, stats, engine, studio, widgets, process.argv.includes('--rapidcast-stats-long'))
+    if ((packExportTest || packImportTest) && packs && engine && studio && widgets && setup) await packsSmoke(window, packs, engine, widgets, setup, studio, packExportTest)
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -151,6 +165,7 @@ async function createWindow(): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  await recoverPackTransaction(app.getPath('userData'))
   await createWindow()
   if (!smokeTest) await studio?.initialize()
   app.on('activate', () => {
@@ -175,6 +190,7 @@ app.on('before-quit', event => {
   event.preventDefault()
   if (!shutdown) shutdown = (async () => {
     setup?.close(); ai?.close()
+    await packs?.close()
     await engine?.dispose().catch(() => console.error('Output cleanup failed during shutdown. Recover the readable session journal on restart.'))
     await stats?.close().catch(() => console.error('Some session data could not be flushed during shutdown.'))
     studio?.dispose()

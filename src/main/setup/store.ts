@@ -26,4 +26,5 @@ export class SetupStore {
       .catch(() => { throw new Error('Setup progress could not be saved. Check disk space and app data permissions.') })
     this.writes = work.catch(() => undefined); return work
   }
+  async flush(): Promise<void> { await this.writes }
 }

@@ -1,5 +1,5 @@
 import { dialog, type BrowserWindow } from 'electron'
-import { readFile, mkdir, copyFile } from 'node:fs/promises'
+import { readFile, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import { join, extname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
@@ -24,5 +24,8 @@ export class Assets {
     if (data.byteLength > 10 * 1024 * 1024) throw new Error('This image is too large. Import a smaller image.')
     const mime = id.endsWith('.png') ? 'image/png' : id.endsWith('.webp') ? 'image/webp' : 'image/jpeg'
     return `data:${mime};base64,${data.toString('base64')}`
+  }
+  async installPng(bytes: Buffer): Promise<string> {
+    const id = `${randomUUID()}.png`; await mkdir(this.directory, { recursive: true }); await writeFile(join(this.directory, id), bytes, { mode: 0o600 }); return id
   }
 }

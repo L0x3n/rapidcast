@@ -2,11 +2,12 @@ import { BrowserWindow } from 'electron'
 import { setTimeout as delay } from 'node:timers/promises'
 import { record } from '../../shared/events'
 import type { Widgets } from '../widgets/service'
+import type { ParamValue } from '../../shared/widgets'
 
 export class SandboxTest {
   constructor(private readonly widgets: Widgets) {}
-  async run(code: string, signal: AbortSignal): Promise<{ id: string; url: string; frames: number }> {
-    const candidate = this.widgets.candidate(code)
+  async run(code: string, signal: AbortSignal, options?: { params: Record<string, ParamValue>; width: number; height: number }): Promise<{ id: string; url: string; frames: number }> {
+    const candidate = this.widgets.candidate(code, options)
     const window = new BrowserWindow({ show: false, width: 1000, height: 700, title: 'RapidCast generated widget test', webPreferences: {
       sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, partition: 'rapidcast-widget-tests'
     } })

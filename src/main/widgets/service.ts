@@ -29,8 +29,10 @@ export class Widgets {
   private hotkeys: WidgetState['hotkeys'] = []
   private seen = new Set<string>()
   private initialized = false
+  private runtimeSavePending = false
   private readonly images: HostImages
   private candidates = new Map<string, WidgetDefinition>()
+  private candidateOptions = new Map<string, { params: Record<string, import('../../shared/widgets').ParamValue>; width: number; height: number }>()
   constructor(directory: string, private readonly engine: Engine, private readonly studio: Studio,
     parentOrigin: string, private readonly publish: (state: WidgetState) => void, testMode = false) {
     this.store = new WidgetStore(directory); this.stream = studio.snapshot()
@@ -51,7 +53,7 @@ export class Widgets {
     this.engine.widgetFailure = message => {
       for (const instance of this.store.instances) { instance.disabled = true; instance.reason = message }
       this.engine.notice(message)
-      this.changed(); void this.store.save().catch(() => undefined)
+      this.changed(); this.persistRuntime()
     }
     this.registerHotkeys()
     this.changed()
@@ -100,6 +102,7 @@ export class Widgets {
     if (previous.activeScene !== state.activeScene || cleared) this.changed()
   }
   async add(definitionId: string, scene: SceneId, credit = ''): Promise<string> {
+    this.packGuard()
     const definition = this.store.definitions.find(item => item.id === definitionId)
     if (!definition) throw new Error('Choose a widget from the library.')
     const settings = this.engine.snapshot().settings
@@ -115,20 +118,22 @@ export class Widgets {
     await this.store.save(); this.changed()
     return id
   }
-  candidate(code: string): WidgetDefinition {
+  candidate(code: string, options?: { params: Record<string, import('../../shared/widgets').ParamValue>; width: number; height: number }): WidgetDefinition {
     if (this.candidates.size >= 4) throw new Error('Close an older test preview before creating another widget.')
     const definition = this.store.definition(`candidate-${randomUUID()}`, code)
-    this.candidates.set(definition.id, definition); return definition
+    this.candidates.set(definition.id, definition); if (options) this.candidateOptions.set(definition.id, options); return definition
   }
-  discardCandidate(id: string): void { this.candidates.delete(id) }
+  discardCandidate(id: string): void { this.candidates.delete(id); this.candidateOptions.delete(id) }
   private testSnapshot(id: string): OverlaySnapshot | null {
     const definition = this.candidates.get(id); if (!definition) return null
-    const layer = { ...makeLayer(id, 'widget'), source: id, width: definition.meta.defaultSize.w, height: definition.meta.defaultSize.h }
+    const options = this.candidateOptions.get(id)
+    const layer = { ...makeLayer(id, 'widget'), source: id, width: options?.width ?? definition.meta.defaultSize.w, height: options?.height ?? definition.meta.defaultSize.h }
     return { revision: 1, activeScene: 'live', scenes: { starting: [], live: [layer], brb: [], ending: [] }, definitions: [definition],
-      instances: [{ id, params: validParams(definition.meta.params, {}), disabled: false, reason: '', createdAt: Date.now() }],
+      instances: [{ id, params: validParams(definition.meta.params, options?.params ?? {}), disabled: false, reason: '', createdAt: Date.now() }],
       events: SIMULATIONS.map(type => simulatedEvent(type, `preflight-${type}`)), transition: 'cut' }
   }
   async replace(id: string, code: string): Promise<void> {
+    this.packGuard()
     const settings = structuredClone(this.engine.snapshot().settings)
     const layer = Object.values(settings.scenes).flat().find(item => item.id === id && item.kind === 'widget')
     const instance = this.store.instances.find(item => item.id === id)
@@ -139,8 +144,9 @@ export class Widgets {
     instance.params = validParams(definition.meta.params, {}); instance.createdAt = Math.max(Date.now(), instance.createdAt + 1); instance.disabled = false; instance.reason = ''
     this.statuses.delete(id); await this.store.save(); this.changed()
   }
-  async install(code: string, credit = ''): Promise<string> { const definition = this.store.install(code, credit); await this.store.save(); this.changed(); return definition.id }
+  async install(code: string, credit = ''): Promise<string> { this.packGuard(); const definition = this.store.install(code, credit); await this.store.save(); this.changed(); return definition.id }
   async params(id: string, params: unknown): Promise<void> {
+    this.packGuard()
     if (this.engine.setupTestActive) throw new Error('Finish or cancel the setup test before changing widgets.')
     const instance = this.store.instances.find(item => item.id === id)
     const layer = Object.values(this.engine.snapshot().settings.scenes).flat().find(item => item.id === id)
@@ -153,6 +159,7 @@ export class Widgets {
     this.engine.setWidgetRuntime(this.server.sandboxUrl, this.store.transition)
   }
   async restart(id: string): Promise<void> {
+    this.packGuard()
     if (this.engine.setupTestActive) throw new Error('Finish or cancel the setup test before restarting widgets.')
     const instance = this.store.instances.find(item => item.id === id)
     if (!instance) throw new Error('Choose a widget to restart.')
@@ -161,6 +168,7 @@ export class Widgets {
     this.engine.setWidgetRuntime(this.server.sandboxUrl, this.store.transition)
   }
   async remove(id: string): Promise<void> {
+    this.packGuard()
     const settings = this.engine.snapshot().settings; const scenes = structuredClone(settings.scenes)
     for (const scene of SCENES) scenes[scene.id] = scenes[scene.id].filter(layer => layer.id !== id)
     await this.engine.configure({ ...settings, scenes })
@@ -198,9 +206,10 @@ export class Widgets {
         reason: instance.disabled ? instance.reason : '', frames: Number(item.frames), triggers: Number(item.triggers), renderMs: Number(item.renderMs) })
     }
     this.revision++; this.publish(this.snapshot())
-    if (disabled) { this.server.broadcast('snapshot', this.overlaySnapshot()); void this.store.save().catch(() => undefined) }
+    if (disabled) { this.server.broadcast('snapshot', this.overlaySnapshot()); this.persistRuntime() }
   }
   async setTransition(value: Transition): Promise<void> {
+    this.packGuard()
     this.store.transition = value; this.engine.setWidgetRuntime(this.server.sandboxUrl, value)
     await this.store.save(); this.changed()
   }
@@ -235,4 +244,12 @@ export class Widgets {
     await this.engine.configure(settings)
   }
   async close(): Promise<void> { globalShortcut.unregisterAll(); await this.server.close() }
+  private packGuard(): void { if (this.engine.packOperationActive) throw new Error('Finish or cancel the pack task before changing widgets.') }
+  private persistRuntime(): void { if (this.engine.packOperationActive) this.runtimeSavePending = true; else void this.store.save().catch(() => undefined) }
+  async finishPackOperation(): Promise<void> { if (this.runtimeSavePending) { this.runtimeSavePending = false; await this.store.save() } }
+  adoptPack(definitions: WidgetDefinition[], instances: WidgetState['instances'], transition: Transition): void {
+    if (!this.engine.packOperationActive) throw new Error('Pack installation is not active.')
+    this.store.definitions = definitions; this.store.instances = instances; this.store.transition = transition; this.statuses.clear()
+    this.engine.setWidgetRuntime(this.server.sandboxUrl, transition)
+  }
 }

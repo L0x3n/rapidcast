@@ -53,9 +53,12 @@ export class WidgetStore {
     this.instances.push(instance)
     return instance
   }
+  serialized(definitions = this.definitions, instances = this.instances, transition = this.transition): string {
+    return JSON.stringify({ definitions: definitions.filter(definition => !definition.builtin), instances, transition, hotkeysEnabled: this.hotkeysEnabled, port: this.port }, null, 2)
+  }
+  async flush(): Promise<void> { await this.writes }
   save(): Promise<void> {
-    const value = JSON.stringify({ definitions: this.definitions.filter(definition => !definition.builtin), instances: this.instances,
-      transition: this.transition, hotkeysEnabled: this.hotkeysEnabled, port: this.port }, null, 2)
+    const value = this.serialized()
     const operation = this.writes.then(async () => {
       await mkdir(this.directory, { recursive: true })
       const path = join(this.directory, 'widgets.json')
