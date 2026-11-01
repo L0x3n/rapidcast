@@ -38,17 +38,19 @@ Package contents are allowlisted to compiled main/preload/renderer/overlay files
 
 | Check | Evidence/status |
 | --- | --- |
-| Strict build and unit tests | Working release candidate: 220 tests in 28 files passed; build passed. |
+| Strict build and unit tests | 220 tests in 28 files and strict build passed in an independent clean clone. |
 | Dependencies | npm audit reports zero vulnerabilities, including development tooling. |
-| History secrets | Initial scan: all eight existing commits passed; final reachable-history and tracked-tree scan runs again before tagging. |
-| Clean clone | Final committed-release verification is pending while this document is prepared. |
-| Portable archive | Initial build created; final extracted-build verification is pending while this document is prepared. |
+| History secrets | Reachable history and all 186 tracked files passed with full redaction. The exact public-ID rule exception passed its positive/negative boundary checks. The scan is repeated before tagging. |
+| Clean clone | Full code verification passed at 211cad6a8f90a22d524159cf2280506860aebd06: npm ci, tests, build, full audit, engine/widgets/AI/setup/stats/packs/loopback checks, packaging and extracted-build smoke. |
+| Portable archive | The ZIP built in that clone was extracted and its actual executable passed fresh-profile configuration/isolation, widget recording, charts/history and test-report checks. Final documentation packaging is checked again at the release commit. |
 | P6 long statistics run | Preserved 602.815-second local/minimized run, exactly 720 simulator messages and one visible trigger; not real audience/network evidence. |
 | P7 sharing | Two-profile native export/import passed, with eight tested configurations, four-scene/theme/params/image/credit persistence and decoded local output. |
 
 The scanner also self-tests its boundary: the known public ID at its config path passes, while the same value at another path and a changed value at the same config path must still be detected. The exception is attached only to the Twitch-token rule; it does not skip the entire config file. These test findings are synthetic public-ID strings, never real tokens, and their reports are redacted.
 
 The final clean-clone report and portable manifest identify the exact checked commit. The local v1.0 tag is added only after release tooling, the final scan and committed clean-clone checks pass. Passing automated checks does not mark the manual rows below as passed.
+
+The final follow-up commit only updates verification notes. Its changed-file list is checked against the fully verified code revision; a second independent clone checks installation, tests/build/audit and the final documentation-bearing ZIP/extracted executable. The native suite need not be repeated for Markdown-only changes. Full-suite evidence is out/clean-clone-report.json; the final source/artifact comparison is out/final-release-report.json and out/release/manifest.json. The annotated v1.0 tag records the checked revisions. Artifact hashes are generated rather than copied into this document, since ZIP bytes include build timestamps.
 
 ## Interactive checks still required
 
