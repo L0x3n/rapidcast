@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PageProps } from '../types'
-import { EventFeed, PanelTitle } from '../components'
+import { PanelTitle } from '../components'
 import { OutputSettings } from '../engine-controls/Output'
 import { AiSettingsPanel } from '../AiSettings'
 import { SetupRepair } from '../setup/Repair'
@@ -44,18 +44,4 @@ export function SettingsPage(props: PageProps): React.JSX.Element {
     <section className="panel"><PanelTitle title="Devices & hotkeys" /><p className="muted">Capture sources and the audio mixer are in Live. Global scene shortcuts work while another app has focus.</p>{props.widgets.hotkeys.map(item => <p key={item.scene}><strong>{item.scene.toUpperCase()}</strong><br /><span className="muted">{item.accelerator} · {item.registered ? 'Registered' : 'Unavailable: another app may use it'}</span></p>)}<button className="secondary" onClick={() => props.go('live')}>Open capture controls ↗</button></section>
     <section className="panel"><PanelTitle title="Repair connection" /><p className="muted">Revalidate the saved Twitch login and recreate event subscriptions.</p><button className="secondary full" disabled={props.busy || !props.state.twitch.clientId} onClick={() => { void props.action('Repairing Twitch', () => window.rapidcast.retryTwitch()) }}>↻ Repair Twitch connection</button></section>
   </div></div>
-}
-
-export function StatsPage(props: PageProps): React.JSX.Element {
-  const [includeTests, setIncludeTests] = useState(false)
-  const events = props.state.events.filter(event => includeTests || event.source === 'twitch')
-  const chats = events.filter(event => event.type === 'chat')
-  const unique = new Set(chats.map(event => event.user.id)).size
-  const follows = events.filter(event => event.type === 'follow').length
-  const bits = events.reduce((sum, event) => sum + (event.type === 'cheer' ? event.bits : 0), 0)
-  return <div data-page="stats"><div className="notice stats-notice"><span>STUDIO ACTIVITY BUFFER</span><p>These are the latest {props.state.events.length} of up to 200 events in this app session. Stream history, charts, widget impact and AI reports arrive in P6.</p></div>
-    <label className="toggle"><input type="checkbox" checked={includeTests} onChange={event => setIncludeTests(event.target.checked)} />Include simulated events <span className="mono">{includeTests ? 'TWITCH + TEST DATA' : 'TWITCH DATA ONLY'}</span></label>
-    <div className="stat-grid">{[['Chat messages', chats.length], ['Unique chatters', unique], ['New follows', follows], ['Bits cheered', bits]].map(([label, value]) => <section className="stat-card" key={label}><span>{label}</span><strong>{value}</strong><small>{includeTests ? 'INCLUDES TEST EVENTS' : 'CURRENT TWITCH BUFFER'}</small></section>)}</div>
-    <div className="stats-layout"><section className="panel"><PanelTitle title="Recent activity" detail={includeTests ? 'TWITCH + TEST' : 'TWITCH ONLY'} /><EventFeed events={events} /></section><div className="side-column"><section className="panel"><PanelTitle title="Twitch channel" /><dl className="settings-values"><div><dt>Channel status</dt><dd>{props.state.twitch.account ? props.state.twitch.channelLive ? 'Live on Twitch' : 'Offline on Twitch' : 'Not connected'}</dd></div><div><dt>Viewers</dt><dd>{props.state.twitch.viewers ?? '--'}</dd></div><div><dt>Refresh</dt><dd>Every 60 seconds</dd></div></dl><p className="muted">Twitch channel status is independent of local recording and private bandwidth tests.</p></section><section className="panel"><PanelTitle title="Your next stream report" detail="IN P6" /><div className="empty-state small"><span>✦</span><strong>Find your next big moment.</strong><p>Session peaks, widget impact and ideas to try next. AI reports will be optional.</p></div></section></div></div>
-  </div>
 }

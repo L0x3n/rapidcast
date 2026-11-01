@@ -12,6 +12,7 @@ import type { Setup } from './service'
 import type { AiService } from '../ai/service'
 import { SetupStore } from './store'
 import { ffmpegPath } from '../engine/encoder'
+import type { Stats } from '../stats/service'
 
 async function until(check: () => boolean, description: string, seconds = 25): Promise<void> {
   const deadline = Date.now() + seconds * 1000
@@ -21,7 +22,7 @@ async function decode(file: string): Promise<void> {
   await new Promise<void>((resolve, reject) => execFile(ffmpegPath(), ['-hide_banner', '-i', file, '-f', 'null', '-'], { windowsHide: true, timeout: 20000 },
     (error, _stdout, stderr) => error || !/Video: h264.*1280x720/.test(stderr) || !/Audio: aac/.test(stderr) ? reject(new Error('Setup did not produce a decodable 720p H.264/AAC recording.')) : resolve()))
 }
-export async function setupSmoke(window: BrowserWindow, setup: Setup, engine: Engine, ai: AiService): Promise<void> {
+export async function setupSmoke(window: BrowserWindow, setup: Setup, engine: Engine, ai: AiService, stats: Stats): Promise<void> {
   const started = Date.now(); const directory = join(__dirname, '../setup-smoke'); await mkdir(directory, { recursive: true })
   const call = async (name: string, args: unknown[] = [], expected = true): Promise<void> => {
     const raw: unknown = await window.webContents.executeJavaScript(`window.rapidcast.${name}(...${JSON.stringify(args)})`)
@@ -92,6 +93,7 @@ export async function setupSmoke(window: BrowserWindow, setup: Setup, engine: En
     window.restore()
     const result = setup.snapshot().benchmark
     if (!result?.stable || result.duration < 15) throw new Error(`The full setup test did not pass: ${setup.snapshot().task.message} ${JSON.stringify(result)}`)
+    if (stats.snapshot().history.length || stats.snapshot().activeId) throw new Error('Setup benchmarks polluted stream session history.')
     const sampleFile = engine.snapshot().recordingPath!
     await decode(sampleFile); await copyFile(sampleFile, join(directory, '720p-setup-test.mp4'))
     await call('applySetupRecommendation')
@@ -110,6 +112,7 @@ export async function setupSmoke(window: BrowserWindow, setup: Setup, engine: En
     await call('setupStep', [5, 'local']); await call('finishSetup', [true])
     await until(() => engine.snapshot().encodedFrames > 40, 'ready button starts local recording')
     await engine.stopOutput(); await decode(engine.snapshot().recordingPath!)
+    if (stats.snapshot().activeId || stats.snapshot().history.length !== 1) throw new Error('The ready button recording was not tracked separately from setup benchmarks.')
     const beforeRepair = JSON.stringify(engine.snapshot().settings)
     await call('repairSetup')
     await until(() => setup.snapshot().task.phase === 'done' && !engine.setupRepairActive, 'repair diagnostics')

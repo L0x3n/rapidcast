@@ -5,6 +5,7 @@ import { exposeCompositor } from './engine'
 import { WIDGET_IPC, type WidgetState } from '../shared/widgets'
 import { AI_IPC, type AiState } from '../shared/ai'
 import { SETUP_IPC, type SetupState } from '../shared/setup'
+import { STATS_IPC, type StatsState } from '../shared/stats'
 
 const api = Object.freeze<RapidCastApi>({
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
@@ -78,7 +79,17 @@ const api = Object.freeze<RapidCastApi>({
   applySetupTheme: () => ipcRenderer.invoke(SETUP_IPC.applyTheme),
   repairSetup: () => ipcRenderer.invoke(SETUP_IPC.repair),
   finishSetup: start => ipcRenderer.invoke(SETUP_IPC.finish, start),
-  openTwitchInspector: () => ipcRenderer.invoke(SETUP_IPC.inspector)
+  openTwitchInspector: () => ipcRenderer.invoke(SETUP_IPC.inspector),
+  getStats: () => ipcRenderer.invoke(STATS_IPC.state),
+  onStats: listener => { const handler = (_event: Electron.IpcRendererEvent, state: StatsState): void => listener(state); ipcRenderer.on(STATS_IPC.update, handler); return () => ipcRenderer.removeListener(STATS_IPC.update, handler) },
+  selectStatsSession: (id, source) => ipcRenderer.invoke(STATS_IPC.select, { id, source }),
+  startStatsSession: mode => ipcRenderer.invoke(STATS_IPC.start, mode),
+  stopStatsSession: () => ipcRenderer.invoke(STATS_IPC.stop),
+  generateStatsReport: () => ipcRenderer.invoke(STATS_IPC.report),
+  cancelStatsReport: () => ipcRenderer.invoke(STATS_IPC.cancel),
+  copyStatsReport: () => ipcRenderer.invoke(STATS_IPC.copy),
+  revealStatsReport: () => ipcRenderer.invoke(STATS_IPC.reveal),
+  setAutoStatsReport: enabled => ipcRenderer.invoke(STATS_IPC.auto, enabled)
 })
 
 if (process.argv.includes('--rapidcast-compositor')) exposeCompositor()

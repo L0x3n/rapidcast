@@ -23,6 +23,10 @@ import { Setup } from './setup/service'
 import { registerSetupIpc } from './setup/ipc'
 import { SETUP_IPC } from '../shared/setup'
 import { setupSmoke } from './setup/smoke'
+import { Stats } from './stats/service'
+import { registerStatsIpc } from './stats/ipc'
+import { STATS_IPC } from '../shared/stats'
+import { statsSmoke } from './stats/smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
@@ -34,6 +38,9 @@ let engine: Engine | null = null
 let widgets: Widgets | null = null
 let ai: AiService | null = null
 let setup: Setup | null = null
+let stats: Stats | null = null
+let quitting = false
+let shutdown: Promise<void> | null = null
 let lastScene = 'starting'
 
 async function createWindow(): Promise<void> {
@@ -69,6 +76,7 @@ async function createWindow(): Promise<void> {
     if (state.activeScene !== lastScene) { lastScene = state.activeScene; void engine?.setScene(state.activeScene).catch(() => engine?.notice('A source in the next scene could not load. Output is continuing. Check the selected scene’s capture layers.')) }
     const mode = engine?.snapshot().mode
     if (!state.twitch.account && (mode === 'live' || mode === 'test')) void engine?.stopOutput().catch(() => engine?.fault('Twitch disconnected. Restart the engine before sending output again.'))
+    stats?.observeStream(state)
     widgets?.streamChanged(state)
     ai?.streamChanged(state)
     setup?.observed()
@@ -78,6 +86,7 @@ async function createWindow(): Promise<void> {
     test => studio!.outputTarget(test), state => {
       for (const open of BrowserWindow.getAllWindows()) if (!open.isDestroyed() && open !== engine?.window) open.webContents.send(ENGINE_IPC.update, state)
       widgets?.engineChanged(state.settings)
+      stats?.observeEngine(state)
       setup?.observed()
     }); await engine.initialize() }
   if (!widgets) {
@@ -98,7 +107,14 @@ async function createWindow(): Promise<void> {
   if (!setup) { setup = new Setup(app.getPath('userData'), engine, studio, widgets, ai, state => { if (!window.isDestroyed()) window.webContents.send(SETUP_IPC.update, state) }); await setup.initialize() }
   studio.sceneGuard = () => { if (engine?.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.') }
   registerSetupIpc(setup, window, rendererUrl)
-  window.on('closed', () => { setup?.close(); ai?.close(); void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
+  if (!stats) {
+    stats = new Stats(app.getPath('userData'), engine, studio, ai, state => { if (!window.isDestroyed()) window.webContents.send(STATS_IPC.update, state) })
+    await stats.initialize()
+    widgets.trigger = value => stats?.trigger(value)
+    widgets.triggerOverflow = () => stats?.limit('trigger-overflow')
+  }
+  registerStatsIpc(stats, window, rendererUrl)
+  window.on('closed', () => app.quit())
 
   ipcMain.removeHandler(IPC.appInfo)
   ipcMain.handle(IPC.appInfo, async (event): Promise<AppInfo> => {
@@ -120,7 +136,8 @@ async function createWindow(): Promise<void> {
     if (process.argv.includes('--rapidcast-engine-test') && engine) await engineSmoke(window, engine)
     if (process.argv.includes('--rapidcast-widget-test') && engine && studio && widgets) await widgetSmoke(window, engine, studio, widgets)
     if (process.argv.includes('--rapidcast-ai-test') && ai && engine && studio && widgets) await aiSmoke(window, ai, engine, widgets, studio)
-    if (process.argv.includes('--rapidcast-setup-test') && setup && engine && ai) await setupSmoke(window, setup, engine, ai)
+    if (process.argv.includes('--rapidcast-setup-test') && setup && engine && ai && stats) await setupSmoke(window, setup, engine, ai, stats)
+    if (process.argv.includes('--rapidcast-stats-test') && stats && engine && studio && widgets) await statsSmoke(window, stats, engine, studio, widgets, process.argv.includes('--rapidcast-stats-long'))
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -153,5 +170,16 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-app.on('before-quit', () => { setup?.close(); ai?.close(); studio?.dispose() })
+app.on('before-quit', event => {
+  if (quitting) return
+  event.preventDefault()
+  if (!shutdown) shutdown = (async () => {
+    setup?.close(); ai?.close()
+    await engine?.dispose().catch(() => console.error('Output cleanup failed during shutdown. Recover the readable session journal on restart.'))
+    await stats?.close().catch(() => console.error('Some session data could not be flushed during shutdown.'))
+    studio?.dispose()
+    await widgets?.close()
+  })().catch(() => console.error('Shutdown could not flush all local session data. The next start will recover its readable journal.'))
+    .finally(() => { quitting = true; app.quit() })
+})
 app.on('will-quit', () => globalShortcut.unregisterAll())

@@ -16,7 +16,7 @@ import { request } from './twitch/http'
 
 const offline = (): TwitchState => ({ clientId: '', phase: 'disconnected',
   message: 'Connect Twitch to bring your chat into the studio.', account: null, device: null,
-  subscriptions: [], socket: 'offline', viewers: null, channelLive: false })
+  subscriptions: [], socket: 'offline', viewers: null, viewersSampleAt: null, channelLive: false })
 
 export class Studio {
   sceneGuard: () => void = () => undefined
@@ -223,8 +223,8 @@ export class Studio {
       const response = await helix.call(`streams?user_id=${encodeURIComponent(userId)}`)
       if (signal.aborted) return
       const streams = Array.isArray(response.data) ? response.data : []
-      this.update({ channelLive: streams.length > 0, viewers: streams.length ? count(record(streams[0]).viewer_count) : 0 })
-    } catch { if (!signal.aborted) this.update({ viewers: null }) }
+      this.update({ channelLive: streams.length > 0, viewers: streams.length ? count(record(streams[0]).viewer_count) : 0, viewersSampleAt: Date.now() })
+    } catch { if (!signal.aborted) this.update({ viewers: null, viewersSampleAt: Date.now() }) }
   }
   async sendChat(message: string): Promise<void> {
     const account = this.state.twitch.account

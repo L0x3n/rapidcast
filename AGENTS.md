@@ -37,6 +37,8 @@ npm run smoke:engine
 npm run smoke:widgets
 npm run smoke:ai
 npm run smoke:setup
+npm run smoke:stats
+npm run smoke:stats:long
 npm run check:rtmp
 npm start
 ```
@@ -47,6 +49,7 @@ npm start
 - P3 `smoke:widgets` verifies compositor follow pixels, transparent browser-source canvas, separate widget renderer process, enforced Worker CSP, exception/infinite-loop termination, scene changes, runtime heartbeat loss/recovery and continuous H.264/AAC recording. Artifacts are in ignored out/widget-smoke. OBS itself, real Twitch images/events and fullscreen-game hotkeys still require manual checks in `docs/P3-TESTS.md`.
 - P4 `smoke:ai` uses a marked local test endpoint and real Electron/Workers/FFmpeg. It checks encrypted key restore/no secret in public state, screening/approval, two repairs, three-second preflight, visible program/credit/events, prompt replacement, automatic publication after approval, cancellation and continuous recording. It is not a real-model quality/latency or second-account Twitch acceptance. See `docs/P4-TESTS.md`; artifacts in ignored out/ai-smoke.
 - P5 `smoke:setup` verifies fresh local onboarding, explicit own-window selection, discovery without camera/mic capture, full 15-second minimized encoding, 720p H.264/AAC, cancellation/locks, strict style data/four previews, saved readiness and Repair. It must not call local completion a real Twitch/network or human five-minute acceptance. Test windows may need show/restore/focus before Windows lists their own source; never substitute another open RapidCast window. See `docs/P5-TESTS.md`.
+- P6 `smoke:stats` verifies short local session metrics, an actual visible widget witness, duplicate-client/preview exclusion, JSONL replay, charts and fixed-response AI Markdown. `smoke:stats:long` runs ten actual minutes minimized and checks a complete impact window. Run native tests sequentially. These are simulator/local-output checks, not real Twitch/viewer/model acceptance; see `docs/P6-TESTS.md`.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -67,6 +70,7 @@ npm start
 - Twitch tokens, stream keys and AI keys exist only in the main process and encrypted Electron safeStorage persistence. Never log them or expose them to renderer/widget code. Do not fall back to plaintext if encryption is unavailable.
 - Client ID is public. Ship Linus's ID in `config/public.json` once supplied, with a future Settings override. Never add a client secret.
 - Local JSON/JSONL data belongs in Electron userData, not the repository. Ignore `.env*`, `data/`, `*.log`, `out/`, `dist/` and `node_modules/`.
+- Stats journals omit raw chat/event-user names, use an unpersisted per-session HMAC salt and keep Twitch/simulator datasets separate. Trigger counts require the host's event/generation/visibility checks and an actual successful runtime frame, excluding replay/preflight/Studio preview. Never derive impact from cumulative status counters. Bound journal rows/triggers/bytes/pending writes and mark loss incomplete without stopping output. AI reports receive anonymous aggregates, never raw chat, identifiers or widget labels; automatic AI reporting defaults off.
 - Use contextIsolation, sandbox, nodeIntegration=false, CSP, sender validation and specific IPC channels. Deny arbitrary navigation, popups and permissions; add narrow device permission handling in P2.
 - AI endpoints and Twitch credentials are handled by the host. Widgets receive normalized public events and host-fetched image bitmaps only.
 - AI keys are write-only IPC input and encrypted in ai-key.bin, associated with their exact base URL. Never return them in AI state or model lists, echo provider error bodies, follow credential-bearing redirects or reuse a key after endpoint change. ai.json holds nonsecret config and a bounded suggestion queue. No AI build publishes before its isolated three-second test passes; at most two code repairs. Real viewer publication requires approval, even with auto-publish enabled. Never send simulator acknowledgments to Twitch.

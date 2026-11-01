@@ -33,6 +33,16 @@ function setup() {
 }
 function event(own = false): StreamEvent { return { id: 'event', type: 'chat', source: 'twitch', at: new Date().toISOString(), receivedAt: Date.now(), user: { id: 'viewer', login: 'viewer', name: 'Viewer' }, own, text: '!widget A neon pulse', color: '', emotes: [], badges: [] } }
 describe('suggestion approval and publication', () => {
+  it('cancels report work on model changes and prevents overlapping widget generation', async () => {
+    const { ai, complete } = setup(); let answer: (value: string) => void = () => undefined
+    complete.mockImplementationOnce(() => new Promise<string>(resolve => { answer = resolve }))
+    const pending = ai.writeStreamReport('{"totals":{"messages":10}}', new AbortController().signal)
+    const signal = complete.mock.calls[0]![3]
+    expect(() => ai.generate({ prompt: 'A widget', scene: 'live' })).toThrow('Wait')
+    await ai.save({ ...ai.store.settings, model: 'next-model' }, undefined)
+    expect(signal.aborted).toBe(true); answer('A stale report')
+    await expect(pending).rejects.toThrow('cancelled')
+  })
   it('keeps screened suggestions out of scenes until explicit approval and final publication', async () => {
     const { ai, state, add, chat } = setup()
     ai.streamChanged({ ...state, events: [event()] })

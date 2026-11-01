@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P5, v0.3 guided setup; streaming engine beta.** A six-step guide connects Twitch, discovers devices, tests encoding/private output, recommends a profile, previews stream styles and checks readiness. The app also provides capture/audio, MP4/Twitch output, isolated widgets, OBS overlays, AI generation and approved viewer ideas. Local setup/recording and builtin widgets work without Twitch or AI.
+**Current stage: P6, v0.4 session analytics; streaming engine beta.** Live charts, local JSONL history, visible widget triggers, two-minute impact comparisons and optional AI Markdown reports now join guided setup, capture/audio, MP4/Twitch output, isolated widgets, OBS overlays and approved viewer ideas. Local setup/recording, practice statistics and builtin widgets work without Twitch or AI.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -35,6 +35,8 @@ npm run smoke:engine
 npm run smoke:widgets
 npm run smoke:ai
 npm run smoke:setup
+npm run smoke:stats
+npm run smoke:stats:long
 npm run check:rtmp
 ```
 
@@ -49,6 +51,8 @@ Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine t
 `smoke:ai` uses a local, explicitly mocked OpenAI-compatible endpoint and real Electron/Workers/FFmpeg. It tests encrypted key restoration and isolation, models/completion requests, suggestion screening, static/runtime failures and two repairs, three-second preflight, approval/publication, program pixels and credit, prompt edits, automatic publishing after approval, cancellation and continuous recording. Evidence is in `out/ai-smoke/`. It does not call a paid model or Twitch. Real provider quality/latency and the second-account acceptance remain unverified; see [P4 acceptance](docs/P4-TESTS.md).
 
 `smoke:setup` verifies a fresh six-step local route, device discovery without capture, explicit selection of only its own test window, cancellation/locks, a full 15-second minimized encoder sample, actual 720p H.264/AAC output, strict theme JSON/four previews, saved readiness and nondestructive Repair. It proves that local results cannot unlock Twitch. It uses a fixed-response style endpoint and no physical camera/mic/system-audio capture or real Twitch connection. Screenshots, clips and report are in `out/setup-smoke/`; see [P5 tests](docs/P5-TESTS.md). Automated local completion is not evidence that a person completed the real Twitch route within five minutes.
+
+`smoke:stats` checks automatic session boundaries, separate Twitch/simulator metrics, one actual widget trigger without duplicates from extra overlays, history replay, Chart.js rendering and an explicitly requested anonymous AI Markdown report. `smoke:stats:long` runs the same path with ten actual minutes of minimized local H.264/AAC recording and a complete two-minute before/after window. Both use simulator events and a fixed-response loopback AI endpoint. They do not verify real Twitch delivery or model quality. Run all native/GPU checks sequentially. Evidence is in `out/stats-smoke/`; see [P6 tests](docs/P6-TESTS.md).
 
 ## Configuration and security
 
@@ -114,10 +118,25 @@ Advanced users can install a widget ES module through Studio's code panel. Every
 
 Large local models can compete for GPU/memory while recording. Provider calls may incur charges. Use a text model that supports Chat Completions; the output-token field is configurable for compatibility. Configuration follows [OpenAI's Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Ollama compatibility](https://docs.ollama.com/api/openai-compatibility), [LM Studio endpoints](https://lmstudio.ai/docs/developer/openai-compat) and [OpenRouter's reference](https://openrouter.ai/docs/api_reference/overview). Codex SDK/ChatGPT sign-in is optional in the brief and is not included in this version.
 
+## Sessions, charts and reports
+
+Open Stats during recording, a private test or public output. Tracking starts with the output request and ends after Stop; reconnects stay in the session. Setup performance tests are excluded. For OBS, connect Twitch and click **Track OBS stream**, then **Stop tracking** when finished. These controls only collect metrics; they do not start or stop OBS. **Start practice** records simulator events only; start preview to run widgets and use Studio's simulator. Practice needs no Twitch connection.
+
+Choose a session and either **Twitch events only** or **Simulator only · TEST**. They are never combined. Counts include observed messages, unique chatters, follows, new subs/resub announcements/gift batches, bits, raids/raid viewers, redemptions and visible widget triggers. Own chat is excluded. Gift recipients are not counted again after their gift batch. Twitch viewer values are channel samples from Helix, including when local output is only recording or private testing. Unknown values stay unknown; the average is the arithmetic mean of successful samples.
+
+The timeline shows messages in each elapsed minute, sampled viewers at their poll times and orange widget-trigger markers. Hover to inspect. A partial final minute is counted without extrapolation; missing chat coverage appears as a gap. A widget trigger means a registered handler completed and returned a visible frame. Initial history replay, inactive scenes, Studio previews, preflight tests and duplicate overlay clients do not inflate totals. This cannot prove that OBS was on air, that a widget was unobscured, or that a viewer saw it.
+
+The impact table compares two minutes before and after each trigger, ranks average message-rate changes per widget, and excludes partial/disconnected windows. A zero baseline has no percentage lift. Overlapping windows are flagged. These are associations; changes in audience, raids or other events may explain the activity.
+
+Stop saves separate measured Markdown reports for Twitch and simulator data. **Write AI analysis** optionally sends anonymous aggregate totals and numbered widget comparisons to the configured provider. The auto-report checkbox authorizes future requests after Stop and defaults off. Cancel or provider errors retain the measured report. Use **Copy Markdown** or **Show saved file**. Reports are displayed as plain text. Provider keys stay in the existing encrypted host boundary.
+
+Session journals and reports live in Electron userData under `sessions/`; `stats.json` contains only the auto-report preference. Journals omit raw chat text and event user names and use a random per-session HMAC for chatter/event identifiers; the salt is not persisted. Public channel IDs and local widget labels are retained. The picker shows the latest 200 journals; older files are kept. Collection stops at 120,000 metric rows, 20,000 widget triggers, 48 hours, a 64 MB journal or a 1 MB pending-write limit. A limit/disk failure marks the session incomplete and preserves streaming output. Restart recovers an unfinished journal at its last readable timestamp. Local files are not encrypted and may be removed from the app data folder while RapidCast is closed.
+
 ## Project map
 
 - `src/main`: privileged desktop services.
 - `src/main/ai`: provider transport, encrypted settings, generation/repair, isolated testing and suggestion approvals.
+- `src/main/stats`: bounded session journals, recovery, history and measured/AI reports.
 - `src/preload`: typed, narrow bridge into the UI.
 - `src/renderer`: React studio UI.
 - `src/overlay`: shared browser-source/isolated widget host.

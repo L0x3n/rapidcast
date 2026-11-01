@@ -63,9 +63,11 @@
         for (const [key, image] of data.images) { images.get(key)?.close(); if (image) images.set(key, image); else images.delete(key); }
       } else if (data.kind === 'tick' && widget) {
         const started = clock(); current = data.now;
-        for (const item of data.events) {
+        const fired = [];
+        for (let index = 0; index < data.events.length; index++) {
+          const item = data.events[index];
           const listeners = handlers.get(item.type) || [];
-          if (listeners.length) triggers++;
+          if (listeners.length) { triggers++; fired.push(index); }
           for (const handler of listeners) apply(handler, undefined, [freeze(item)]);
         }
         const dt = Math.max(0, Math.min(.1, (current - previous) / 1000)); previous = current;
@@ -76,7 +78,7 @@
         if (slow >= 3) throw new Error('Drawing was too slow three times. Reduce drawing work and restart.');
         if (data.draw) {
           const bitmap = canvas.transferToImageBitmap();
-          send({ kind: 'frame', sequence: data.sequence, bitmap, elapsed, triggers }, [bitmap]);
+          send({ kind: 'frame', sequence: data.sequence, bitmap, elapsed, triggers, fired }, [bitmap]);
         } else send({ kind: 'idle', sequence: data.sequence, elapsed, triggers });
       }
     } catch (error) { disable(error); }

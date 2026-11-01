@@ -40,7 +40,7 @@ export function WidgetLibrary(props: PageProps): React.JSX.Element {
   const copy = (id: string): void => { void props.action('Copying OBS URL', () => window.rapidcast.copyOverlay(id)).then(ok => { if (ok) setCopied(id) }) }
   return <>
     <section className="panel"><PanelTitle title="Widget stage" detail="TRANSPARENT OVERLAY · LIVE RUNTIME" />
-      <div className="overlay-preview"><iframe title="Live widget scene preview" src={`${props.widgets.baseUrl}/overlay/program`} sandbox="allow-scripts allow-same-origin" /></div>
+      <div className="overlay-preview"><iframe title="Live widget scene preview" src={`${props.widgets.baseUrl}/overlay/program?preview=1`} sandbox="allow-scripts allow-same-origin" /></div>
       <div className="builder-footer"><span className="muted">{SCENES.find(item => item.id === scene)?.name} · simulator events appear here</span><TransitionControl {...props} /></div>
     </section>
     <section><PanelTitle title="Widget library" detail="ADD TO THE SELECTED SCENE" />

@@ -1,0 +1,24 @@
+.stats-page { display: grid; gap: 22px; }
+.stats-session-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 24px; align-items: start; }
+.stats-session-bar p { margin: 8px 0 0; }
+.stats-session-bar .button-row { margin-top: 10px; gap: 8px; flex-wrap: wrap; }
+.stats-tracking-note { grid-column: 1 / -1; font-size: 12px; }
+.stats-filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) minmax(170px, .8fr); gap: 18px; align-items: end; }
+.stats-source { padding: 10px 0; color: var(--accent); font: 11px Consolas, monospace; }
+.stats-source.test { color: #ffad66; }
+.stats-source small { display: block; color: var(--muted); margin-top: 7px; }
+.stats-page .stat-grid { margin-bottom: 0; }
+.stats-page .stat-card small { line-height: 1.6; }
+.stats-page .notice { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.stats-chart { height: 300px; position: relative; }
+.stats-chart-key { font-size: 12px; margin: 16px 0 0; }
+.stats-chart-key i { display: inline-block; width: 18px; border-top: 2px dotted #ffad66; margin-right: 7px; }
+.stats-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.stats-detail-grid p { font-size: 12px; margin-bottom: 10px; }
+.stats-table-wrap { overflow-x: auto; }
+.stats-table { border-collapse: collapse; width: 100%; text-align: right; font-size: 12px; }
+.stats-table th { color: var(--muted); font-size: 10px; font-weight: 600; }
+.stats-table th, .stats-table td { padding: 13px 10px; border-bottom: 1px solid var(--line); }
+.stats-table th:first-child, .stats-table td:first-child { text-align: left; min-width: 130px; }
+.stats-report { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 440px; overflow: auto; background: #0b1016; border: 1px solid var(--line); border-radius: 6px; padding: 24px; color: #bfccdb; font: 12px/1.8 Consolas, monospace; }
+@media (max-width: 1220px) { .stats-session-bar { grid-template-columns: 1fr; } .stats-filters { grid-template-columns: 1.4fr 1fr; } .stats-source { grid-column: 1 / -1; } .stats-detail-grid { gap: 16px; } }

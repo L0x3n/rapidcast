@@ -5,6 +5,7 @@ import type { EngineUiApi } from './engine-api'
 import type { WidgetApi } from './widgets'
 import type { AiApi } from './ai'
 import type { SetupApi } from './setup'
+import type { StatsApi } from './stats'
 
 export interface AppInfo {
   name: string
@@ -14,7 +15,7 @@ export interface AppInfo {
   twitchClientConfigured: boolean
 }
 
-export interface RapidCastApi extends EngineUiApi, WidgetApi, AiApi, SetupApi {
+export interface RapidCastApi extends EngineUiApi, WidgetApi, AiApi, SetupApi, StatsApi {
   getAppInfo(): Promise<AppInfo>
   getStudio(): Promise<StudioState>
   onStudio(listener: (state: StudioState) => void): () => void
@@ -42,6 +43,7 @@ export interface TwitchState {
   subscriptions: SubscriptionState[]
   socket: 'offline' | 'connecting' | 'connected' | 'reconnecting'
   viewers: number | null
+  viewersSampleAt: number | null
   channelLive: boolean
 }
 export interface StudioState { revision: number; twitch: TwitchState; events: StreamEvent[]; activeScene: SceneId }

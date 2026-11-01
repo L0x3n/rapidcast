@@ -13,4 +13,4 @@ RapidCast source code is licensed under the MIT license in LICENSE. Dependencies
 
 ## Other dependencies
 
-Electron, React, React DOM, Acorn (MIT), electron-vite, Vite, TypeScript and Vitest retain the license files supplied with their npm packages. Exact package versions and transitive dependencies are recorded in package-lock.json. P8 packaging must collect the applicable dependency notices alongside the distributable.
+Electron, React, React DOM, Acorn (MIT), Chart.js 4.6.1 (MIT; `node_modules/chart.js/LICENSE.md`), electron-vite, Vite, TypeScript and Vitest retain the license files supplied with their npm packages. Exact package versions and transitive dependencies are recorded in package-lock.json. P8 packaging must collect the applicable dependency notices alongside the distributable.

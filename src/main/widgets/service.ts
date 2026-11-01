@@ -13,8 +13,13 @@ import { OverlayServer } from './server'
 import { HostImages } from './images'
 import { simulatedEvent, SIMULATIONS } from '../../shared/simulator'
 import type { WidgetDefinition } from '../../shared/widgets'
+import type { EventSource } from '../../shared/events'
+
+export interface ConfirmedTrigger { widgetId: string; widgetName: string; definitionId: string; eventId: string; source: EventSource; runtime: 'engine' | 'obs' }
 
 export class Widgets {
+  trigger: (value: ConfirmedTrigger) => void = () => undefined
+  triggerOverflow: () => void = () => undefined
   readonly store: WidgetStore
   readonly server: OverlayServer
   private revision = 0
@@ -165,6 +170,21 @@ export class Widgets {
   report(raw: unknown): void {
     const data = record(raw)
     if (!Array.isArray(data.statuses) || data.statuses.length > 32) return
+    if (data.runtime === 'engine' || data.runtime === 'obs') {
+      if (data.overflow === true) this.triggerOverflow()
+      if (Array.isArray(data.witnesses)) for (const raw of data.witnesses.slice(0, 16)) {
+        const witness = record(raw)
+        const scene = SCENES.find(scene => scene.id === witness.scene)
+        const layer = scene && this.engine.snapshot().settings.scenes[scene.id].find(layer => layer.id === witness.widgetId)
+        const instance = this.store.instances.find(item => item.id === witness.widgetId)
+        const definition = this.store.definitions.find(item => item.id === layer?.source)
+        const event = this.stream.events.find(event => event.id === witness.eventId && event.source === witness.source)
+        if (!layer || layer.kind !== 'widget' || !instance || instance.disabled || !definition || witness.generation !== widgetGeneration(definition, instance, layer) ||
+            !event || Date.now() - event.receivedAt > 30000 || !layer.visible || layer.opacity <= 0 || layer.x >= 1920 || layer.y >= 1080 || layer.x + layer.width <= 0 || layer.y + layer.height <= 0 ||
+            data.runtime === 'engine' && scene.id !== this.stream.activeScene) continue
+        this.trigger({ widgetId: instance.id, widgetName: definition.meta.name, definitionId: definition.id, eventId: event.id, source: event.source, runtime: data.runtime })
+      }
+    }
     let disabled = false
     for (const value of data.statuses) {
       const item = record(value); const instance = this.store.instances.find(next => next.id === item.id)

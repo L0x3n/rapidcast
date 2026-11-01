@@ -5,14 +5,16 @@ import { widgetGeneration, type OverlaySnapshot, type WidgetDefinition, type Wid
 interface Entry {
   id: string; generation: string; layer: Layer; worker: Worker | null; status: WidgetStatus
   busy: boolean; deadline: number; sequence: number; events: StreamEvent[]; seen: Set<string>
+  replay: Set<string>; flight: StreamEvent[]; drawn: boolean; flightScene: string
 }
+export interface TriggerWitness { widgetId: string; generation: string; eventId: string; source: StreamEvent['source']; at: number; scene: string }
 export class WidgetManager {
   private entries = new Map<string, Entry>()
   readonly frames = new Map<string, ImageBitmap>()
   private images = new Map<string, ImageBitmap>()
   private imagePending = new Set<string>()
   private lastTick = 0
-  constructor(private readonly frame: ((id: string, bitmap: ImageBitmap) => void) | null) {}
+  constructor(private readonly frame: ((id: string, bitmap: ImageBitmap) => void) | null, private readonly trigger?: (witness: TriggerWitness) => void) {}
   statuses(): (WidgetStatus & { generation: string })[] { return [...this.entries.values()].map(entry => ({ ...entry.status, generation: entry.generation })) }
   configure(snapshot: OverlaySnapshot): void {
     const layers = Object.values(snapshot.scenes).flat().filter(layer => layer.kind === 'widget')
@@ -31,7 +33,7 @@ export class WidgetManager {
       }
       if (previous) this.disposeEntry(previous)
       const entry: Entry = { id: layer.id, generation, layer, worker: null, busy: false, deadline: performance.now() + 2000, sequence: 0,
-        events: [...snapshot.events], seen: new Set(snapshot.events.map(item => `${item.source}:${item.id}`)),
+        events: [...snapshot.events], seen: new Set(snapshot.events.map(item => `${item.source}:${item.id}`)), replay: new Set(snapshot.events.map(item => `${item.source}:${item.id}`)), flight: [], drawn: false, flightScene: '',
         status: { id: layer.id, state: instance.disabled ? 'disabled' : 'loading', reason: instance.reason, frames: 0, triggers: 0, renderMs: 0 } }
       this.entries.set(layer.id, entry)
       if (!instance.disabled) this.start(entry, definition, instance)
@@ -60,9 +62,16 @@ export class WidgetManager {
           if (data.kind === 'frame') {
             if (!(data.bitmap instanceof ImageBitmap) || data.bitmap.width > 1920 || data.bitmap.height > 1080) { this.disable(entry, 'Widget returned an invalid frame.'); return }
             entry.status.frames++
+            if (entry.drawn && Array.isArray(data.fired)) for (const index of data.fired.slice(0, 200)) {
+              if (!Number.isInteger(index) || index < 0 || index >= entry.flight.length) continue
+              const fired = entry.flight[index]!
+              if (!entry.replay.has(`${fired.source}:${fired.id}`)) this.trigger?.({ widgetId: entry.id, generation: entry.generation, eventId: fired.id, source: fired.source, at: Date.now(), scene: entry.flightScene })
+            }
             if (this.frame) this.frame(entry.id, data.bitmap)
             else { this.frames.get(entry.id)?.close(); this.frames.set(entry.id, data.bitmap) }
           }
+          for (const event of entry.flight) entry.replay.delete(`${event.source}:${event.id}`)
+          entry.flight = []
         } else { if (data?.bitmap instanceof ImageBitmap) data.bitmap.close(); this.disable(entry, 'Widget violated its frame protocol. Restart or edit it.') }
       }
     } catch { this.disable(entry, 'This browser could not start the widget Worker. Use a current Chromium browser source.') }
@@ -75,13 +84,14 @@ export class WidgetManager {
   tick(scene: string, snapshot: OverlaySnapshot, now: number): void {
     const resumed = this.lastTick !== 0 && now - this.lastTick > 500
     this.lastTick = now
-    const visible = new Set((snapshot.scenes[scene as keyof typeof snapshot.scenes] || []).filter(layer => layer.visible).map(layer => layer.id))
+    const visible = new Set((snapshot.scenes[scene as keyof typeof snapshot.scenes] || []).filter(layer => layer.visible && layer.opacity > 0 && layer.x < 1920 && layer.y < 1080 && layer.x + layer.width > 0 && layer.y + layer.height > 0).map(layer => layer.id))
     for (const entry of this.entries.values()) {
       if (resumed && entry.deadline) entry.deadline = now + (entry.status.state === 'loading' ? 2000 : 250)
       if (entry.deadline && now > entry.deadline) { this.disable(entry, entry.status.state === 'loading' ? 'Widget startup exceeded two seconds. Edit or restart it.' : 'Widget exceeded its 250 ms deadline. Edit or restart it.'); continue }
       if (entry.status.state !== 'ready' || entry.busy || !entry.worker || !visible.has(entry.id) && !entry.events.length) continue
       entry.busy = true; entry.deadline = now + 250; entry.sequence++
       const events = entry.events.splice(0, 200)
+      entry.flight = events; entry.drawn = visible.has(entry.id); entry.flightScene = scene
       entry.worker.postMessage({ kind: 'tick', sequence: entry.sequence, now: Date.now(), draw: visible.has(entry.id), events })
     }
   }

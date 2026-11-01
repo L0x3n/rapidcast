@@ -14,7 +14,9 @@ try {
   const widgetTest = process.argv.includes('--widgets')
   const aiTest = process.argv.includes('--ai')
   const setupTest = process.argv.includes('--setup')
-  const child = spawn(electron, ['.', '--rapidcast-smoke-test', ...(engineTest ? ['--rapidcast-engine-test'] : []), ...(widgetTest ? ['--rapidcast-widget-test'] : []), ...(aiTest ? ['--rapidcast-ai-test'] : []), ...(setupTest ? ['--rapidcast-setup-test'] : [])], {
+  const statsTest = process.argv.includes('--stats') || process.argv.includes('--stats-long')
+  const statsLong = process.argv.includes('--stats-long')
+  const child = spawn(electron, ['.', '--rapidcast-smoke-test', ...(engineTest ? ['--rapidcast-engine-test'] : []), ...(widgetTest ? ['--rapidcast-widget-test'] : []), ...(aiTest ? ['--rapidcast-ai-test'] : []), ...(setupTest ? ['--rapidcast-setup-test'] : []), ...(statsTest ? ['--rapidcast-stats-test'] : []), ...(statsLong ? ['--rapidcast-stats-long'] : [])], {
     cwd: new URL('..', import.meta.url),
     env: environment,
     windowsHide: true,
@@ -24,10 +26,10 @@ try {
   const timeout = setTimeout(() => {
     console.error('The Electron smoke check timed out. Close any stuck RapidCast test window and retry.')
     child.kill()
-  }, setupTest ? 120000 : engineTest || widgetTest || aiTest ? 90000 : 25000)
+  }, statsLong ? 720000 : setupTest ? 120000 : engineTest || widgetTest || aiTest || statsTest ? 90000 : 25000)
   child.stdout.on('data', (chunk) => {
     const output = chunk.toString()
-    if (output.includes(setupTest ? 'RapidCast setup smoke passed:' : aiTest ? 'RapidCast AI smoke passed:' : widgetTest ? 'RapidCast widget smoke passed:' : engineTest ? 'RapidCast engine smoke passed:' : 'RapidCast smoke passed:')) passed = true
+    if (output.includes(statsTest ? 'RapidCast stats smoke passed:' : setupTest ? 'RapidCast setup smoke passed:' : aiTest ? 'RapidCast AI smoke passed:' : widgetTest ? 'RapidCast widget smoke passed:' : engineTest ? 'RapidCast engine smoke passed:' : 'RapidCast smoke passed:')) passed = true
     process.stdout.write(output)
   })
   child.stderr.pipe(process.stderr)

@@ -1,5 +1,5 @@
 import './style.css'
-import { WidgetManager } from './manager'
+import { WidgetManager, type TriggerWitness } from './manager'
 import type { OverlaySnapshot, WidgetStatus, Transition } from '../shared/widgets'
 import type { StreamEvent } from '../shared/events'
 import { SceneTransition } from '../renderer/runtime/transitions'
@@ -15,7 +15,12 @@ let currentScene = ''
 let lastReport = 0
 let lastHeartbeat = 0
 let transitionMode: Transition = 'fade'
-const manager = new WidgetManager(embed ? (id, bitmap) => parent.postMessage({ channel: 'rapidcast-widget', kind: 'frame', id, bitmap }, '*', [bitmap]) : null)
+const runtime = embed ? 'engine' : new URLSearchParams(location.search).has('preview') ? 'preview' : 'obs'
+const pending: TriggerWitness[] = []
+let overflow = false
+let lastTriggers = 0
+const manager = new WidgetManager(embed ? (id, bitmap) => parent.postMessage({ channel: 'rapidcast-widget', kind: 'frame', id, bitmap }, '*', [bitmap]) : null,
+  witness => { if (runtime === 'preview' || location.pathname.startsWith('/widget/')) return; if (pending.length < 256) pending.push(witness); else overflow = true })
 const requested = location.pathname.split('/').at(-1) || 'program'
 function selectedScene(): string { return override || (requested === 'program' || embed ? snapshot?.activeScene || 'starting' : requested) }
 function apply(next: OverlaySnapshot, reset = false): void {
@@ -58,6 +63,12 @@ function draw(now: number): void {
       lastReport = now
       void fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statuses }) }).catch(() => undefined)
       if (embed) parent.postMessage({ channel: 'rapidcast-widget', kind: 'statuses', statuses }, '*')
+    }
+    if ((pending.length || overflow) && now - lastTriggers > 100) {
+      lastTriggers = now
+      void fetch('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ statuses: [], runtime, witnesses: pending.splice(0, 16), overflow }) })
+        .then(response => { if (!response.ok) overflow = true }).catch(() => { overflow = true })
+      overflow = false
     }
     if (embed && now - lastHeartbeat > 500) { lastHeartbeat = now; parent.postMessage({ channel: 'rapidcast-widget', kind: 'heartbeat' }, '*') }
   }

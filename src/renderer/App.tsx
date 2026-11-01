@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { ActionResult, AppInfo, StudioState } from '../shared/contracts'
 import { LivePage, StudioPage } from './pages/LiveStudio'
-import { SettingsPage, StatsPage } from './pages/AccountPages'
+import { SettingsPage } from './pages/AccountPages'
+import { StatsPage } from './stats/StatsPage'
 import { SetupWizard } from './setup/SetupWizard'
 import type { Action, PageProps, Tab } from './types'
 import type { EngineState } from '../shared/engine'
 import type { WidgetState } from '../shared/widgets'
 import type { AiState } from '../shared/ai'
 import type { SetupState } from '../shared/setup'
+import type { StatsState } from '../shared/stats'
 
 const tabs: { id: Tab; name: string; icon: string; description: string }[] = [
   { id: 'live', name: 'Live', icon: '◉', description: 'Your stage, your rules.' },
@@ -25,6 +27,7 @@ export function App(): React.JSX.Element {
   const [widgets, setWidgets] = useState<WidgetState | null>(null)
   const [ai, setAi] = useState<AiState | null>(null)
   const [setup, setSetup] = useState<SetupState | null>(null)
+  const [stats, setStats] = useState<StatsState | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   useEffect(() => { document.querySelector('.page-content')?.scrollTo(0, 0) }, [tab])
@@ -42,6 +45,9 @@ export function App(): React.JSX.Element {
     const unsubscribeAi = window.rapidcast.onAi(applyAi)
     const applySetup = (incoming: SetupState): void => { if (active) setSetup(current => !current || incoming.revision >= current.revision ? incoming : current) }
     const unsubscribeSetup = window.rapidcast.onSetup(applySetup)
+    const applyStats = (incoming: StatsState): void => { if (active) setStats(current => !current || incoming.revision >= current.revision ? incoming : current) }
+    const unsubscribeStats = window.rapidcast.onStats(applyStats)
+    window.rapidcast.getStats().then(applyStats).catch(() => { if (active) setError('Session history could not connect. Restart RapidCast.') })
     window.rapidcast.getSetup().then(incoming => { applySetup(incoming); if (active && !incoming.completed) setTab('setup') }).catch(() => { if (active) setError('The setup guide could not connect. Restart RapidCast.') })
     window.rapidcast.getAi().then(applyAi).catch(() => { if (active) setError('The AI service could not connect. Restart RapidCast.') })
     window.rapidcast.getWidgets().then(applyWidgets).catch(() => { if (active) setError('The widget service could not connect. Restart RapidCast.') })
@@ -49,7 +55,7 @@ export function App(): React.JSX.Element {
     Promise.all([window.rapidcast.getAppInfo(), window.rapidcast.getStudio()]).then(([appInfo, studio]) => {
       if (active) { setInfo(appInfo); apply(studio) }
     }).catch(() => { if (active) setError('The desktop connection could not start. Restart RapidCast and try again.') })
-    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets(); unsubscribeAi(); unsubscribeSetup() }
+    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets(); unsubscribeAi(); unsubscribeSetup(); unsubscribeStats() }
   }, [])
 
   const action: Action = async (label, run) => {
@@ -64,7 +70,7 @@ export function App(): React.JSX.Element {
   }
   const current = tabs.find(item => item.id === tab) ?? tabs[0]!
   const titles: Record<Tab, string> = { live: 'Run the show.', studio: 'Build the unexpected.', setup: 'Your first great stream.', stats: 'Read the room.', settings: 'Your studio. Your way.' }
-  const props: PageProps | null = state && info && engine && widgets && ai && setup ? { state, info, engine, widgets, ai, setup, action, busy: Boolean(busy), go: setTab } : null
+  const props: PageProps | null = state && info && engine && widgets && ai && setup && stats ? { state, info, engine, widgets, ai, setup, stats, action, busy: Boolean(busy), go: setTab } : null
 
   return <div className="app-shell" data-app-ready={props ? 'true' : 'false'}>
     <aside className="sidebar">
