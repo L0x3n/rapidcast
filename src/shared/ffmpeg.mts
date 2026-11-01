@@ -6,6 +6,7 @@ export function ffmpegArgs(settings: EngineSettings, encoder: 'h264_nvenc' | 'li
     '-fflags', '+genpts', '-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000',
     '-f', 'matroska', '-i', 'pipe:0', '-map', '0:v:0', '-map', '0:a:0', '-c:v', encoder]
   args.push(...(encoder === 'h264_nvenc' ? ['-preset', 'p4', '-tune', 'll', '-rc', 'cbr', '-zerolatency', '1', '-bf', '0'] : ['-preset', 'veryfast', '-tune', 'zerolatency', '-x264-params', 'nal-hrd=cbr:force-cfr=1']))
+  if (settings.resolution === '720p') args.push('-vf', 'scale=1280:720:flags=lanczos')
   args.push('-pix_fmt', 'yuv420p', '-r', String(settings.fps), '-g', String(settings.fps * 2), '-keyint_min', String(settings.fps * 2),
     '-sc_threshold', '0', '-b:v', `${settings.bitrate}k`, '-minrate', `${settings.bitrate}k`, '-maxrate', `${settings.bitrate}k`, '-bufsize', `${settings.bitrate * 2}k`,
     '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-flags', '+global_header')
@@ -19,6 +20,7 @@ export function ffmpegArgs(settings: EngineSettings, encoder: 'h264_nvenc' | 'li
 }
 export function teeEscape(value: string): string { return value.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('|', '\\|') }
 export function ffmpegProblem(line: string): { message: string; reconnect: boolean; gpu: boolean } | null {
+  if (/FIFO queue full|FIFO queue.*overflow/i.test(line)) return { message: 'The output queue filled. Reduce bitrate and repeat the private test.', reconnect: true, gpu: false }
   if (/No capable devices|Cannot load.*cuda|OpenEncodeSessionEx failed|minimum required.*driver|unsupported device|No NVENC capable/i.test(line)) return { message: 'NVENC is unavailable. Retrying with the CPU encoder.', reconnect: false, gpu: true }
   if (/Connection refused|Connection reset|Broken pipe|Network is unreachable|Recovery failed|Error opening.*rtmp|Error writing.*(rtmp|flv)|I\/O error/i.test(line)) return { message: 'Twitch output lost its connection. FFmpeg is retrying automatically.', reconnect: true, gpu: false }
   if (/No space left|Permission denied/i.test(line)) return { message: 'The recording could not be written. Check disk space and folder permissions.', reconnect: false, gpu: false }

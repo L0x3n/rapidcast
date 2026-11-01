@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P4, v0.2 AI Studio and viewer ideas; streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, capture/audio, local MP4 recording, Twitch output, five canvas widgets, transitions, hotkeys, OBS overlays, optional AI generation/prompt editing and screened viewer suggestions. Preview, recording, simulation and builtin/OBS widgets work without an account or AI key.
+**Current stage: P5, v0.3 guided setup; streaming engine beta.** A six-step guide connects Twitch, discovers devices, tests encoding/private output, recommends a profile, previews stream styles and checks readiness. The app also provides capture/audio, MP4/Twitch output, isolated widgets, OBS overlays, AI generation and approved viewer ideas. Local setup/recording and builtin widgets work without Twitch or AI.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -34,6 +34,7 @@ npm run smoke
 npm run smoke:engine
 npm run smoke:widgets
 npm run smoke:ai
+npm run smoke:setup
 npm run check:rtmp
 ```
 
@@ -46,6 +47,8 @@ Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine t
 `smoke:widgets` proves a simulated follow appears in the compositor, verifies the transparent OBS canvas and separate widget renderer process, probes enforced Worker network/eval/DOM/Node restrictions, and injects throwing and infinite-loop widgets during an uninterrupted recording. It also tests scene changes, runtime heartbeat failure and recovery. Evidence is saved in `out/widget-smoke/`. See [P3 tests and widget contract](docs/P3-TESTS.md). The automated browser-source check uses Electron Chromium; importing the URL in OBS itself remains a manual check.
 
 `smoke:ai` uses a local, explicitly mocked OpenAI-compatible endpoint and real Electron/Workers/FFmpeg. It tests encrypted key restoration and isolation, models/completion requests, suggestion screening, static/runtime failures and two repairs, three-second preflight, approval/publication, program pixels and credit, prompt edits, automatic publishing after approval, cancellation and continuous recording. Evidence is in `out/ai-smoke/`. It does not call a paid model or Twitch. Real provider quality/latency and the second-account acceptance remain unverified; see [P4 acceptance](docs/P4-TESTS.md).
+
+`smoke:setup` verifies a fresh six-step local route, device discovery without capture, explicit selection of only its own test window, cancellation/locks, a full 15-second minimized encoder sample, actual 720p H.264/AAC output, strict theme JSON/four previews, saved readiness and nondestructive Repair. It proves that local results cannot unlock Twitch. It uses a fixed-response style endpoint and no physical camera/mic/system-audio capture or real Twitch connection. Screenshots, clips and report are in `out/setup-smoke/`; see [P5 tests](docs/P5-TESTS.md). Automated local completion is not evidence that a person completed the real Twitch route within five minutes.
 
 ## Configuration and security
 
@@ -69,13 +72,27 @@ See [docs/P1-TESTS.md](docs/P1-TESTS.md) for manual acceptance steps and known l
 
 1. Open Live and Start preview. Refresh displays/windows, add a layer, choose its source and click Apply layer. Each of the four scenes stores its own layers. Position, size, z-order, opacity and crop are editable. Camera and image layers use explicit selection.
 2. Choose a mic and desktop audio in the mixer if wanted. Check meters, gain and mute. Record locally, then Stop output and open the recording folder to inspect video and audio.
-3. Settings selects 1080p30/60, bitrate, encoder and simultaneous recording. Auto probes NVENC and falls back to x264 veryfast. Stop output before changing these output settings; live layer/audio changes remain available.
+3. Settings selects 1080p/720p at 30/60 fps, bitrate, encoder and simultaneous recording. The program canvas stays 1920×1080; FFmpeg scales only the encoded 720p output. Auto probes NVENC and falls back to x264 veryfast. Stop output before changing these output settings; live layer/audio changes remain available.
 4. Connect Twitch and keep Private Twitch bandwidth test enabled for testing. The host retrieves the key and default ingest; it adds bandwidthtest=true so test streams do not go public. Disable that option only when ready to Go Live on Twitch.
 5. Complete the real device, ten-minute minimized/fullscreen-game and short public-stream checks in [docs/P2-TESTS.md](docs/P2-TESTS.md). Until then, the engine stays beta. Studio's OBS browser sources are available as the fallback.
 
 The compositor has its own hidden BrowserWindow with background throttling disabled and reads VideoFrames directly from capture tracks. A 30/60 fps canvas and mixed Web Audio feed MediaRecorder, bounded acknowledged IPC chunks, then the bundled FFmpeg process. UI thumbnails update at 2 fps independently of output. Actual frame timing is logged as local JSONL. Stream keys and credential-bearing process arguments are never logged or exposed to the compositor/UI.
 
 **Machine gotcha:** FFmpeg on PATH is a fake Python launcher. Never call it. All engine code and verification scripts require the absolute binary path from `ffmpeg-static`.
+
+## First-run setup and Repair
+
+New/incomplete profiles open Setup automatically and resume their saved step. Choose Twitch or Local recording, then work through Welcome → Twitch → Devices → Performance → Style → Ready. The Twitch step shows the existing device login code/browser flow; local setup can skip it honestly.
+
+Entering Devices refreshes choices without starting capture. Select a display/window, optional camera/mic and desktop audio, then Apply. This replaces display/camera choices in Live, keeps other layers/scenes and starts the selected capture. Check the actual picture, audio meters and a recording yourself. None is an explicit choice for a widgets-only or silent program. Readiness also checks that selected tracks are open; a frozen last frame does not count as healthy capture.
+
+Performance samples the Live scene for 15 seconds after output startup and stops automatically. Local tests verify encoding only. Private Twitch tests use the host-held bandwidth-test target; sender observations do not prove remote ingestion or maximum upload capacity. Review the test in Twitch Inspector and confirm your review. Apply a conservative 720p/1080p, 30/60 fps and bitrate recommendation; heavier/changed output needs another test. Setup locks program changes and other output starts during its test; Stop remains available.
+
+Style accepts a description through the configured AI or offers presets without AI. Only validated colors, a supported system font, layout and four short titles are accepted. Review all four placeholder layouts, then Apply to managed backgrounds/titles and builtin widget styling/layout. Custom widget code is kept. Recheck the picture and Performance after styling.
+
+Ready distinguishes local recording from public Twitch output. It requires current preview/tracks, your picture/audio checks, rendered active widgets and recent matching performance evidence; Twitch also requires a connected account, its private test and your Inspector review. Results expire after 30 minutes and bind to the program/widget params, output load, encoder and channel. Save setup or explicitly Start local recording / Go Live on Twitch. Short setup checks do not replace the full P2 game/audio acceptance.
+
+Settings and Setup both offer Recheck setup. It checks encryption, encoder, choices and overlay; a saved Twitch login is revalidated and a configured AI gets a small completion check. It keeps sources/settings/credentials, clears stale performance approvals and asks for a fresh test. Cancel waits for any already-running diagnostic to finish; Repair never stops an existing live output or silently starts a private/public stream. Details and manual acceptance are in [P5-TESTS.md](docs/P5-TESTS.md).
 
 ## Widgets and OBS
 

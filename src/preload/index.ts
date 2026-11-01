@@ -4,6 +4,7 @@ import { ENGINE_IPC, type EngineState } from '../shared/engine'
 import { exposeCompositor } from './engine'
 import { WIDGET_IPC, type WidgetState } from '../shared/widgets'
 import { AI_IPC, type AiState } from '../shared/ai'
+import { SETUP_IPC, type SetupState } from '../shared/setup'
 
 const api = Object.freeze<RapidCastApi>({
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
@@ -62,7 +63,22 @@ const api = Object.freeze<RapidCastApi>({
   rejectSuggestion: id => ipcRenderer.invoke(AI_IPC.reject, id),
   editSuggestion: (id, idea) => ipcRenderer.invoke(AI_IPC.edit, { id, idea }),
   simulateSuggestion: idea => ipcRenderer.invoke(AI_IPC.simulate, idea),
-  createSuggestionReward: cost => ipcRenderer.invoke(AI_IPC.reward, cost)
+  createSuggestionReward: cost => ipcRenderer.invoke(AI_IPC.reward, cost),
+  getSetup: () => ipcRenderer.invoke(SETUP_IPC.state),
+  onSetup: listener => { const handler = (_event: Electron.IpcRendererEvent, state: SetupState): void => listener(state); ipcRenderer.on(SETUP_IPC.update, handler); return () => ipcRenderer.removeListener(SETUP_IPC.update, handler) },
+  setupStep: (step, goal) => ipcRenderer.invoke(SETUP_IPC.step, { step, goal }),
+  discoverSetupDevices: () => ipcRenderer.invoke(SETUP_IPC.discover),
+  applySetupDevices: value => ipcRenderer.invoke(SETUP_IPC.devices, value),
+  confirmSetup: (kind, checked) => ipcRenderer.invoke(SETUP_IPC.confirm, { kind, checked }),
+  testSetup: kind => ipcRenderer.invoke(SETUP_IPC.test, kind),
+  cancelSetup: () => ipcRenderer.invoke(SETUP_IPC.cancel),
+  applySetupRecommendation: () => ipcRenderer.invoke(SETUP_IPC.recommend),
+  generateSetupTheme: prompt => ipcRenderer.invoke(SETUP_IPC.generateTheme, prompt),
+  previewSetupTheme: theme => ipcRenderer.invoke(SETUP_IPC.previewTheme, theme),
+  applySetupTheme: () => ipcRenderer.invoke(SETUP_IPC.applyTheme),
+  repairSetup: () => ipcRenderer.invoke(SETUP_IPC.repair),
+  finishSetup: start => ipcRenderer.invoke(SETUP_IPC.finish, start),
+  openTwitchInspector: () => ipcRenderer.invoke(SETUP_IPC.inspector)
 })
 
 if (process.argv.includes('--rapidcast-compositor')) exposeCompositor()

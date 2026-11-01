@@ -278,3 +278,26 @@ summary { cursor: pointer; line-height: 1.6; }
 .suggestion-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: #cbfa54; }
 .suggestion-meta span { color: #a7b5c0; font: 9px Consolas,monospace; }
 .suggestion-card.blocked { border-top-color: #b86a48; }
+.setup-steps { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 8px; margin-bottom: 20px; }
+.setup-steps button { display: flex; align-items: center; gap: 10px; padding: 14px 10px; background: #151d25; border: 1px solid #303b46; font-size: 12px; font-weight: 700; }
+.setup-steps span { display: grid; place-items: center; border-radius: 50%; width: 24px; height: 24px; background: #2a3540; color: #aab7c6; }
+.setup-steps .active { border-color: #cbfa54; color: #cbfa54; background: #1e291b; }
+.setup-steps .active span { color: #101710; background: #cbfa54; }
+.setup-task { display: flex; align-items: center; gap: 15px; padding: 16px; margin-bottom: 20px; background: #151e25; border: 1px solid #34414c; border-radius: 8px; font-size: 12px; line-height: 1.6; }
+.setup-task strong { color: #cbfa54; font: 11px Consolas,monospace; }
+.setup-task span { flex: 1; }
+.setup-welcome h2 { font-size: 36px; margin: 20px 0; }
+.setup-welcome p { font-size: 16px; }
+.setup-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 25px 0; }
+.setup-confirmations { margin-top: 20px; }
+.setup-confirmations .toggle { align-items: start; font-size: 13px; line-height: 1.5; }
+.wizard-footer { display: flex; justify-content: space-between; gap: 14px; margin: 12px 0 25px; }
+.test-progress { display: flex; align-items: center; gap: 12px; margin: 25px 0; }
+.test-progress progress { width: 70%; accent-color: #cbfa54; }
+.test-result { border-top: 1px solid #33402f; padding-top: 20px; margin-top: 24px; }
+.recommendation { padding: 20px; background: #1e2a19; border: 1px solid #748a3d; border-radius: 8px; margin-top: 20px; }
+.theme-scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+.theme-scenes figure { margin: 0; overflow: hidden; border-radius: 8px; border: 1px solid #3d4b45; }
+.theme-scenes svg { display: block; width: 100%; aspect-ratio: 16 / 9; }
+.theme-scenes figcaption { padding: 10px; color: #c8d5c0; font-size: 12px; background: #182021; }
+.theme-title { margin-top: 24px; }

@@ -36,6 +36,7 @@ npm run smoke
 npm run smoke:engine
 npm run smoke:widgets
 npm run smoke:ai
+npm run smoke:setup
 npm run check:rtmp
 npm start
 ```
@@ -45,6 +46,7 @@ npm start
 - P2 `smoke:engine` performs native synthetic 1080p30/60 and CPU recordings, minimized timing, audio/video pulse comparison, and capture of the test app's own window. `check:rtmp` uses loopback only and verifies receiver-disconnect recovery plus simultaneous MP4. Run these sequentially; artifacts are in ignored out/engine-smoke. See `docs/P2-TESTS.md` for the mandatory real Twitch/game tests, which remain pending.
 - P3 `smoke:widgets` verifies compositor follow pixels, transparent browser-source canvas, separate widget renderer process, enforced Worker CSP, exception/infinite-loop termination, scene changes, runtime heartbeat loss/recovery and continuous H.264/AAC recording. Artifacts are in ignored out/widget-smoke. OBS itself, real Twitch images/events and fullscreen-game hotkeys still require manual checks in `docs/P3-TESTS.md`.
 - P4 `smoke:ai` uses a marked local test endpoint and real Electron/Workers/FFmpeg. It checks encrypted key restore/no secret in public state, screening/approval, two repairs, three-second preflight, visible program/credit/events, prompt replacement, automatic publication after approval, cancellation and continuous recording. It is not a real-model quality/latency or second-account Twitch acceptance. See `docs/P4-TESTS.md`; artifacts in ignored out/ai-smoke.
+- P5 `smoke:setup` verifies fresh local onboarding, explicit own-window selection, discovery without camera/mic capture, full 15-second minimized encoding, 720p H.264/AAC, cancellation/locks, strict style data/four previews, saved readiness and Repair. It must not call local completion a real Twitch/network or human five-minute acceptance. Test windows may need show/restore/focus before Windows lists their own source; never substitute another open RapidCast window. See `docs/P5-TESTS.md`.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -87,6 +89,7 @@ npm start
 - Secrets stay in main even for output. Retrieve the key and default ingest through Twitch, prefer the supplied RTMPS URL and append bandwidthtest=true only for test mode. Stop Twitch output on account disconnect/revocation. Local recording can work without Twitch.
 - Compositor missed slots, encoder drops/duplicates and network outage packets are separate metrics. Unknown muxer bitrate is null. After stop, label retained encoder measurements as last output. UI thumbnails are only 2 fps and do not measure output smoothness.
 - Source failures warn and preserve the last frame; compositor crash/watchdog failure stops output. Release devices stops tracks/audio and releases the suspension blocker. Keep runtime warnings plain and actionable. Do not claim the full ten-minute game/Twitch acceptance from short synthetic benchmarks.
+- P5 keeps the compositor canvas at 1920×1080 and uses FFmpeg scaling for 720p output. Missing resolution in older settings migrates to 1080p. Setup tests own an output lease: block competing starts/program/scene/widget changes, retain emergency Stop, release the lease even on cancellation/shutdown error. A local result never authorizes Twitch readiness. Private sender tests still require the user's Inspector review. Bind evidence to current program/widget params, encoder/channel, tested load and a 30-minute lifetime; selected tracks must actually be open.
 - Exclude secret-bearing ffmpeg arguments and URLs from logs/errors. Reconnect on RTMP drops with clear user-facing recovery status.
 
 ## Release

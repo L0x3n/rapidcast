@@ -42,7 +42,7 @@ function draw(): void {
     lastTelemetry = now
     window.compositor.telemetry({ ...timing.stats, visibility: document.visibilityState, ...audio.levels(), mimeType: recorder.mimeType,
       capabilities: [window.MediaStreamTrackProcessor ? 'track-processor' : 'no-track-processor', 'canvas-capture', 'web-audio',
-        ...([...sources.videos.values()].some(source => source.frame) ? ['capture-frame'] : []), ...widgets.capabilities()] })
+        ...([...sources.videos.values()].some(source => source.frame) ? ['capture-frame'] : []), ...sources.capabilities(), ...audio.capabilities(), ...widgets.capabilities()] })
   }
   if (now - lastThumbnail >= 500 && !thumbnailPending) {
     lastThumbnail = now; thumbnailPending = true

@@ -16,7 +16,7 @@ export class Engine {
     message: 'Start the compositor to preview or record your program.', settings: defaultEngineSettings(),
     telemetry: null, encoder: '', encoderFps: 0, encodedFrames: 0, bitrateKbps: null, outputDropped: 0,
     outputDuplicated: 0, queueBytes: 0, elapsedSeconds: 0, recordingPath: null, diagnosticsPath: null,
-    preview: null, sources: [], cameras: [], microphones: [], nvenc: null }
+    preview: null, sources: [], cameras: [], microphones: [], nvenc: null, outputIssues: 0 }
   window: BrowserWindow | null = null
   url = ''
   private ready: (() => void) | null = null
@@ -45,6 +45,8 @@ export class Engine {
   widgetFailure: (message: string) => void = message => this.notice(message)
   readonly assets: Assets
   testPattern = false
+  setupTestActive = false
+  setupRepairActive = false
 
   constructor(private readonly storage: Storage, private readonly directory: string, private readonly recordings: string,
     private readonly targetFor: (test: boolean) => Promise<string>, private readonly publish: (state: EngineState) => void) {
@@ -101,13 +103,15 @@ export class Engine {
     }
   }
   async configure(input: unknown): Promise<void> {
+    if (this.setupTestActive) throw new Error('Finish or cancel the setup test before changing the program.')
     const settings = validateEngineSettings(input)
-    if (this.wantOutput && (settings.fps !== this.state.settings.fps || settings.bitrate !== this.state.settings.bitrate || settings.encoder !== this.state.settings.encoder || settings.recordWhileLive !== this.state.settings.recordWhileLive)) throw new Error('Stop output before changing FPS, bitrate, encoder or recording settings.')
+    if (this.wantOutput && (settings.resolution !== this.state.settings.resolution || settings.fps !== this.state.settings.fps || settings.bitrate !== this.state.settings.bitrate || settings.encoder !== this.state.settings.encoder || settings.recordWhileLive !== this.state.settings.recordWhileLive)) throw new Error('Stop output before changing resolution, FPS, bitrate, encoder or recording settings.')
     await this.storage.saveEngineSettings(settings)
     this.update({ settings })
     if (this.state.previewActive) await this.command('configure')
   }
   async setScene(scene: SceneId): Promise<void> {
+    if (this.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.')
     if (this.scene === scene) return
     this.scene = scene
     if (this.state.previewActive) await this.command('configure')
@@ -117,6 +121,8 @@ export class Engine {
     if (this.state.previewActive) void this.command('configure').catch(() => this.notice('The widget runtime could not refresh. Restart preview to reconnect it.'))
   }
   async listSources(): Promise<void> { this.update({ sources: await captureSources() }) }
+  async refreshDevices(): Promise<void> { await this.ensureWindow(); await this.command('devices') }
+  async refreshEncoder(): Promise<void> { if (this.state.mode) throw new Error('Stop output before checking the encoder.'); this.update({ nvenc: await probeNvenc() }) }
   async prepareCapture(id: string): Promise<void> { await this.selectCapture?.(id) }
   devices(cameras: DeviceChoice[], microphones: DeviceChoice[]): void { this.update({ cameras, microphones }) }
   async preview(): Promise<void> {
@@ -151,11 +157,13 @@ export class Engine {
   thumbnail(data: ArrayBuffer): void {
     if (data.byteLength < 200000) this.update({ preview: `data:image/jpeg;base64,${Buffer.from(data).toString('base64')}` })
   }
-  async startOutput(mode: 'record' | 'test' | 'live', privateTarget?: string): Promise<void> {
+  async startOutput(mode: 'record' | 'test' | 'live', privateTarget?: string, fromSetup = false): Promise<void> {
+    if (this.setupRepairActive) throw new Error('Wait for the setup repair checks to finish before starting output.')
+    if (this.setupTestActive && !fromSetup) throw new Error('Finish or cancel the setup test before starting another output.')
     if (this.wantOutput || this.stopping) throw new Error('Output is already starting or running. Stop it first.')
     const epoch = ++this.outputEpoch
     this.wantOutput = true
-    this.update({ mode, phase: 'starting', message: mode === 'record' ? 'Starting local recording.' : mode === 'test' ? 'Starting a private Twitch bandwidth test.' : 'Starting your Twitch stream.' })
+    this.update({ mode, phase: 'starting', outputIssues: 0, message: mode === 'record' ? 'Starting local recording.' : mode === 'test' ? 'Starting a private Twitch bandwidth test.' : 'Starting your Twitch stream.' })
     try {
       const target = mode === 'record' ? null : privateTarget ?? await this.targetFor(mode === 'test')
       if (epoch !== this.outputEpoch || !this.wantOutput) throw new Error('Output was cancelled before it started.')
@@ -195,7 +203,7 @@ export class Engine {
       problem: (message, reconnect, gpu) => {
         if (runId !== this.runId || !this.wantOutput) return
         if (gpu && settings.encoder !== 'x264') this.forceCpu = true
-        this.update({ message, ...(reconnect ? { phase: 'reconnecting' as const } : message === 'Twitch output reconnected.' ? { phase: 'streaming' as const } : {}) })
+        this.update({ message, outputIssues: this.state.outputIssues + (reconnect || gpu ? 1 : 0), ...(reconnect ? { phase: 'reconnecting' as const } : message === 'Twitch output reconnected.' ? { phase: 'streaming' as const } : {}) })
       },
       closed: expected => {
         if (!expected && this.wantOutput && runId === this.runId) {
@@ -213,7 +221,7 @@ export class Engine {
   private scheduleRestart(): void {
     if (this.restartTimer || this.restarting || !this.wantOutput) return
     if (++this.restartCount > 5) { this.fault('Output could not recover after five attempts. Stop output, check Twitch and your encoder, then try again.'); return }
-    this.update({ phase: 'reconnecting', message: this.forceCpu ? 'NVENC stopped. Restarting output with the CPU encoder.' : 'Output stopped. Rebuilding the video stream and reconnecting automatically.' })
+    this.update({ phase: 'reconnecting', outputIssues: this.state.outputIssues + 1, message: this.forceCpu ? 'NVENC stopped. Restarting output with the CPU encoder.' : 'Output stopped. Rebuilding the video stream and reconnecting automatically.' })
     this.restartTimer = setTimeout(() => {
       this.restartTimer = null
       void this.restart()

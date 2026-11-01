@@ -15,6 +15,8 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
         }
       };
       await until(() => document.querySelector('[data-app-ready="true"]'));
+      const setup = await window.rapidcast.getSetup();
+      if (!setup.completed && !document.querySelector('[data-page="setup"]')) throw new Error('First launch did not open the setup guide.');
       for (const tab of ['studio', 'setup', 'stats', 'settings', 'live']) {
         document.querySelector('[data-tab="' + tab + '"]').click();
         await until(() => document.querySelector('[data-page="' + tab + '"]'));

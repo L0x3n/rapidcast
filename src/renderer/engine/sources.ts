@@ -7,6 +7,7 @@ export class Sources {
   private audioOnly: MediaStream | null = null
   private desktopEnabled = false
   private currentFps = 30
+  capabilities(): string[] { return [...this.videos].filter(([, source]) => source.active && source.frame && source.stream.getVideoTracks().some(track => track.readyState === 'live')).map(([id]) => `capture:${id}`) }
 
   async configure(layers: Layer[], desktop: boolean, fps: number): Promise<MediaStream | null> {
     if (desktop !== this.desktopEnabled || fps !== this.currentFps) this.close()

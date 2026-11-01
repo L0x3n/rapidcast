@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { ActionResult, AppInfo, StudioState } from '../shared/contracts'
 import { LivePage, StudioPage } from './pages/LiveStudio'
-import { SetupPage, SettingsPage, StatsPage } from './pages/AccountPages'
+import { SettingsPage, StatsPage } from './pages/AccountPages'
+import { SetupWizard } from './setup/SetupWizard'
 import type { Action, PageProps, Tab } from './types'
 import type { EngineState } from '../shared/engine'
 import type { WidgetState } from '../shared/widgets'
 import type { AiState } from '../shared/ai'
+import type { SetupState } from '../shared/setup'
 
 const tabs: { id: Tab; name: string; icon: string; description: string }[] = [
   { id: 'live', name: 'Live', icon: '◉', description: 'Your stage, your rules.' },
@@ -22,6 +24,7 @@ export function App(): React.JSX.Element {
   const [engine, setEngine] = useState<EngineState | null>(null)
   const [widgets, setWidgets] = useState<WidgetState | null>(null)
   const [ai, setAi] = useState<AiState | null>(null)
+  const [setup, setSetup] = useState<SetupState | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   useEffect(() => { document.querySelector('.page-content')?.scrollTo(0, 0) }, [tab])
@@ -37,13 +40,16 @@ export function App(): React.JSX.Element {
     const unsubscribeWidgets = window.rapidcast.onWidgets(applyWidgets)
     const applyAi = (incoming: AiState): void => { if (active) setAi(current => !current || incoming.revision >= current.revision ? incoming : current) }
     const unsubscribeAi = window.rapidcast.onAi(applyAi)
+    const applySetup = (incoming: SetupState): void => { if (active) setSetup(current => !current || incoming.revision >= current.revision ? incoming : current) }
+    const unsubscribeSetup = window.rapidcast.onSetup(applySetup)
+    window.rapidcast.getSetup().then(incoming => { applySetup(incoming); if (active && !incoming.completed) setTab('setup') }).catch(() => { if (active) setError('The setup guide could not connect. Restart RapidCast.') })
     window.rapidcast.getAi().then(applyAi).catch(() => { if (active) setError('The AI service could not connect. Restart RapidCast.') })
     window.rapidcast.getWidgets().then(applyWidgets).catch(() => { if (active) setError('The widget service could not connect. Restart RapidCast.') })
     window.rapidcast.getEngine().then(applyEngine).catch(() => { if (active) setError('The engine could not connect. Restart RapidCast.') })
     Promise.all([window.rapidcast.getAppInfo(), window.rapidcast.getStudio()]).then(([appInfo, studio]) => {
       if (active) { setInfo(appInfo); apply(studio) }
     }).catch(() => { if (active) setError('The desktop connection could not start. Restart RapidCast and try again.') })
-    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets(); unsubscribeAi() }
+    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets(); unsubscribeAi(); unsubscribeSetup() }
   }, [])
 
   const action: Action = async (label, run) => {
@@ -58,7 +64,7 @@ export function App(): React.JSX.Element {
   }
   const current = tabs.find(item => item.id === tab) ?? tabs[0]!
   const titles: Record<Tab, string> = { live: 'Run the show.', studio: 'Build the unexpected.', setup: 'Your first great stream.', stats: 'Read the room.', settings: 'Your studio. Your way.' }
-  const props: PageProps | null = state && info && engine && widgets && ai ? { state, info, engine, widgets, ai, action, busy: Boolean(busy), go: setTab } : null
+  const props: PageProps | null = state && info && engine && widgets && ai && setup ? { state, info, engine, widgets, ai, setup, action, busy: Boolean(busy), go: setTab } : null
 
   return <div className="app-shell" data-app-ready={props ? 'true' : 'false'}>
     <aside className="sidebar">
@@ -82,7 +88,7 @@ export function App(): React.JSX.Element {
         {!props ? <div className="empty-state">Opening your desktop studio…</div> : <>
           {tab === 'live' && <LivePage {...props} />}
           {tab === 'studio' && <StudioPage {...props} />}
-          {tab === 'setup' && <SetupPage {...props} />}
+          {tab === 'setup' && <SetupWizard {...props} />}
           {tab === 'stats' && <StatsPage {...props} />}
           {tab === 'settings' && <SettingsPage {...props} />}
         </>}

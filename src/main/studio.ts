@@ -19,6 +19,7 @@ const offline = (): TwitchState => ({ clientId: '', phase: 'disconnected',
   subscriptions: [], socket: 'offline', viewers: null, channelLive: false })
 
 export class Studio {
+  sceneGuard: () => void = () => undefined
   private state: StudioState = { revision: 0, twitch: offline(), events: [], activeScene: 'starting' }
   private preferences: Preferences = { clientId: '', activeScene: 'starting' }
   private readonly oauth = new OAuth()
@@ -273,6 +274,7 @@ export class Studio {
   simulate(type: Simulation): void { this.push(simulatedEvent(type, `sim-${randomUUID()}`)) }
   clearSimulations(): void { this.state = { ...this.state, events: this.state.events.filter(e => e.source !== 'simulator') }; this.update() }
   async selectScene(activeScene: SceneId): Promise<void> {
+    this.sceneGuard()
     const preferences = { ...this.preferences, activeScene }
     await this.storage.savePreferences(preferences)
     this.preferences = preferences

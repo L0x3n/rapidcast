@@ -7,9 +7,11 @@ export interface Layer {
   id: string; name: string; kind: LayerKind; source: string; text: string; color: string
   x: number; y: number; width: number; height: number; z: number; opacity: number; visible: boolean
   crop: { left: number; right: number; top: number; bottom: number }
+  font?: 'Segoe UI' | 'Consolas' | 'Georgia'
 }
 export interface AudioSettings { micId: string; desktop: boolean; micGain: number; desktopGain: number; micMuted: boolean; desktopMuted: boolean }
 export interface EngineSettings {
+  resolution: '1080p' | '720p'
   fps: 30 | 60; bitrate: number; encoder: 'auto' | 'nvenc' | 'x264'; recordWhileLive: boolean
   audio: AudioSettings; scenes: Record<SceneId, Layer[]>
 }
@@ -24,6 +26,7 @@ export interface EngineState {
   bitrateKbps: number | null; outputDropped: number; outputDuplicated: number; queueBytes: number
   elapsedSeconds: number; recordingPath: string | null; diagnosticsPath: string | null; preview: string | null
   sources: CaptureSource[]; cameras: DeviceChoice[]; microphones: DeviceChoice[]; nvenc: boolean | null
+  outputIssues: number
 }
 export interface EngineCommand {
   id: string; type: 'configure' | 'preview' | 'pause' | 'record' | 'end-record' | 'devices'
@@ -50,7 +53,7 @@ export function defaultEngineSettings(): EngineSettings {
   const scenes = {} as Record<SceneId, Layer[]>
   for (const scene of SCENES) scenes[scene.id] = [makeLayer(`${scene.id}-bg`, 'color'),
     { ...makeLayer(`${scene.id}-title`, 'text'), text: scene.title, x: 110, y: 440, width: 1700, height: 180, z: 5 }]
-  return { fps: 30, bitrate: 6000, encoder: 'auto', recordWhileLive: true,
+  return { resolution: '1080p', fps: 30, bitrate: 6000, encoder: 'auto', recordWhileLive: true,
     audio: { micId: 'none', desktop: false, micGain: 1, desktopGain: 1, micMuted: false, desktopMuted: false }, scenes }
 }
 function number(value: unknown, min: number, max: number): value is number {
@@ -58,7 +61,7 @@ function number(value: unknown, min: number, max: number): value is number {
 }
 export function validateEngineSettings(input: unknown): EngineSettings {
   const value = record(input); const audio = record(value.audio); const scenes = record(value.scenes)
-  if ((value.fps !== 30 && value.fps !== 60) || !number(value.bitrate, 500, 10000) ||
+  if (value.resolution !== undefined && !['1080p', '720p'].includes(String(value.resolution)) || (value.fps !== 30 && value.fps !== 60) || !number(value.bitrate, 500, 10000) ||
       !['auto', 'nvenc', 'x264'].includes(String(value.encoder)) || typeof value.recordWhileLive !== 'boolean' ||
       typeof audio.micId !== 'string' || audio.micId.length > 256 || typeof audio.desktop !== 'boolean' ||
       !number(audio.micGain, 0, 3) || !number(audio.desktopGain, 0, 3) ||
@@ -71,7 +74,7 @@ export function validateEngineSettings(input: unknown): EngineSettings {
       const layer = record(raw); const crop = record(layer.crop)
       if (typeof layer.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(layer.id) || ids.has(layer.id) ||
           typeof layer.name !== 'string' || layer.name.length > 100 || !['display', 'camera', 'image', 'text', 'color', 'widget'].includes(String(layer.kind)) ||
-          typeof layer.source !== 'string' || layer.source.length > 256 || typeof layer.text !== 'string' || layer.text.length > 1000 ||
+          typeof layer.source !== 'string' || layer.source.length > 256 || typeof layer.text !== 'string' || layer.text.length > 1000 || layer.font !== undefined && !['Segoe UI', 'Consolas', 'Georgia'].includes(String(layer.font)) ||
           typeof layer.color !== 'string' || !/^#[a-f0-9]{6}$/i.test(layer.color) || !number(layer.x, -1920, 3840) || !number(layer.y, -1080, 2160) ||
           !number(layer.width, 1, 7680) || !number(layer.height, 1, 4320) || !number(layer.z, -100, 100) || !number(layer.opacity, 0, 1) ||
           typeof layer.visible !== 'boolean' || !number(crop.left, 0, .95) || !number(crop.right, 0, .95) ||
@@ -81,7 +84,7 @@ export function validateEngineSettings(input: unknown): EngineSettings {
       ids.add(layer.id)
     }
   }
-  return structuredClone(input) as EngineSettings
+  return { ...structuredClone(input) as EngineSettings, resolution: value.resolution === '720p' ? '720p' : '1080p' }
 }
 
 export class FrameClock {

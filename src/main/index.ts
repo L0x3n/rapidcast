@@ -19,6 +19,10 @@ import { AiService } from './ai/service'
 import { registerAiIpc } from './ai/ipc'
 import { AI_IPC } from '../shared/ai'
 import { aiSmoke } from './ai/smoke'
+import { Setup } from './setup/service'
+import { registerSetupIpc } from './setup/ipc'
+import { SETUP_IPC } from '../shared/setup'
+import { setupSmoke } from './setup/smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
@@ -29,6 +33,7 @@ let studio: Studio | null = null
 let engine: Engine | null = null
 let widgets: Widgets | null = null
 let ai: AiService | null = null
+let setup: Setup | null = null
 let lastScene = 'starting'
 
 async function createWindow(): Promise<void> {
@@ -66,16 +71,19 @@ async function createWindow(): Promise<void> {
     if (!state.twitch.account && (mode === 'live' || mode === 'test')) void engine?.stopOutput().catch(() => engine?.fault('Twitch disconnected. Restart the engine before sending output again.'))
     widgets?.streamChanged(state)
     ai?.streamChanged(state)
+    setup?.observed()
   })
   if (!engine) { engine = new Engine(new Storage(app.getPath('userData')), app.getPath('userData'),
     smokeTest ? join(app.getPath('userData'), 'recordings') : join(app.getPath('videos'), 'RapidCast'),
     test => studio!.outputTarget(test), state => {
       for (const open of BrowserWindow.getAllWindows()) if (!open.isDestroyed() && open !== engine?.window) open.webContents.send(ENGINE_IPC.update, state)
       widgets?.engineChanged(state.settings)
+      setup?.observed()
     }); await engine.initialize() }
   if (!widgets) {
     widgets = new Widgets(app.getPath('userData'), engine, studio, process.env.ELECTRON_RENDERER_URL ? new URL(process.env.ELECTRON_RENDERER_URL).origin : 'file:', state => {
       for (const open of BrowserWindow.getAllWindows()) if (!open.isDestroyed() && open !== engine?.window) open.webContents.send(WIDGET_IPC.update, state)
+      setup?.observed()
     }, smokeTest)
     await widgets.initialize()
   }
@@ -87,7 +95,10 @@ async function createWindow(): Promise<void> {
     await ai.initialize()
   }
   registerAiIpc(ai, window, rendererUrl)
-  window.on('closed', () => { ai?.close(); void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
+  if (!setup) { setup = new Setup(app.getPath('userData'), engine, studio, widgets, ai, state => { if (!window.isDestroyed()) window.webContents.send(SETUP_IPC.update, state) }); await setup.initialize() }
+  studio.sceneGuard = () => { if (engine?.setupTestActive) throw new Error('Finish or cancel the setup test before switching scenes.') }
+  registerSetupIpc(setup, window, rendererUrl)
+  window.on('closed', () => { setup?.close(); ai?.close(); void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
 
   ipcMain.removeHandler(IPC.appInfo)
   ipcMain.handle(IPC.appInfo, async (event): Promise<AppInfo> => {
@@ -109,6 +120,7 @@ async function createWindow(): Promise<void> {
     if (process.argv.includes('--rapidcast-engine-test') && engine) await engineSmoke(window, engine)
     if (process.argv.includes('--rapidcast-widget-test') && engine && studio && widgets) await widgetSmoke(window, engine, studio, widgets)
     if (process.argv.includes('--rapidcast-ai-test') && ai && engine && studio && widgets) await aiSmoke(window, ai, engine, widgets, studio)
+    if (process.argv.includes('--rapidcast-setup-test') && setup && engine && ai) await setupSmoke(window, setup, engine, ai)
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -141,5 +153,5 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-app.on('before-quit', () => { ai?.close(); studio?.dispose() })
+app.on('before-quit', () => { setup?.close(); ai?.close(); studio?.dispose() })
 app.on('will-quit', () => globalShortcut.unregisterAll())

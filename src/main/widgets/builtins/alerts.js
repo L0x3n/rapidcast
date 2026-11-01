@@ -10,7 +10,7 @@ function receive(event) {
 }
 export default {
   meta: { name: 'Alert box', description: 'Loud neon alerts with code-drawn confetti for follows, subs, bits and raids.', defaultSize: { w: 760, h: 260 }, params: {
-    accent: { type: 'color', default: '#cbfa54' }, seconds: { type: 'number', default: 5, min: 1, max: 15 }
+    accent: { type: 'color', default: '#cbfa54' }, font: { type: 'string', default: 'Segoe UI' }, seconds: { type: 'number', default: 5, min: 1, max: 15 }
   } },
   init(host) { api = host; ['follow', 'sub', 'cheer', 'raid'].forEach(type => api.on(type, receive)); },
   update(dt) {
@@ -30,7 +30,7 @@ export default {
     ctx.fillStyle = glow; ctx.shadowColor = api.params.accent; ctx.shadowBlur = 24; ctx.beginPath(); ctx.roundRect(12, 40, w - 24, h - 60, 22); ctx.fill(); ctx.shadowBlur = 0;
     ctx.strokeStyle = api.params.accent; ctx.lineWidth = 3; ctx.stroke();
     ctx.fillStyle = api.params.accent; ctx.font = '900 22px monospace'; ctx.textAlign = 'center'; ctx.fillText((active.test ? 'TEST · ' : '') + active.title, w / 2, 96);
-    ctx.fillStyle = '#ffffff'; ctx.font = '900 32px sans-serif'; ctx.fillText(active.detail, w / 2, 153, w - 75);
+    ctx.fillStyle = '#ffffff'; ctx.font = '900 32px ' + api.params.font; ctx.fillText(active.detail, w / 2, 153, w - 75);
     ctx.fillStyle = '#c5d5bc'; ctx.font = '16px sans-serif'; ctx.fillText('YOU MAKE THIS SHOW.', w / 2, 188);
     particles.forEach((p, i) => { ctx.save(); ctx.translate(p.x * w, p.y * h); ctx.rotate(p.angle); ctx.fillStyle = i % 3 ? api.params.accent : '#ffffff'; ctx.fillRect(-3, -7, 6, 14); ctx.restore(); });
   }

@@ -75,6 +75,7 @@ export class Widgets {
     this.revision++; this.publish(this.snapshot())
     if (this.initialized) this.server.broadcast('snapshot', this.overlaySnapshot())
   }
+  refresh(): void { this.changed() }
   engineChanged(settings: EngineSettings): void {
     const signature = JSON.stringify(settings.scenes)
     if (signature === this.lastSceneSignature) return
@@ -135,6 +136,7 @@ export class Widgets {
   }
   async install(code: string, credit = ''): Promise<string> { const definition = this.store.install(code, credit); await this.store.save(); this.changed(); return definition.id }
   async params(id: string, params: unknown): Promise<void> {
+    if (this.engine.setupTestActive) throw new Error('Finish or cancel the setup test before changing widgets.')
     const instance = this.store.instances.find(item => item.id === id)
     const layer = Object.values(this.engine.snapshot().settings.scenes).flat().find(item => item.id === id)
     const definition = this.store.definitions.find(item => item.id === layer?.source)
@@ -146,6 +148,7 @@ export class Widgets {
     this.engine.setWidgetRuntime(this.server.sandboxUrl, this.store.transition)
   }
   async restart(id: string): Promise<void> {
+    if (this.engine.setupTestActive) throw new Error('Finish or cancel the setup test before restarting widgets.')
     const instance = this.store.instances.find(item => item.id === id)
     if (!instance) throw new Error('Choose a widget to restart.')
     instance.disabled = false; instance.reason = ''; instance.createdAt = Math.max(Date.now(), instance.createdAt + 1); this.statuses.delete(id)

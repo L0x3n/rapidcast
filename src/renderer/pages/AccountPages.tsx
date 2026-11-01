@@ -3,8 +3,9 @@ import type { PageProps } from '../types'
 import { EventFeed, PanelTitle } from '../components'
 import { OutputSettings } from '../engine-controls/Output'
 import { AiSettingsPanel } from '../AiSettings'
+import { SetupRepair } from '../setup/Repair'
 
-function TwitchConnection(props: PageProps): React.JSX.Element {
+export function TwitchConnection(props: PageProps): React.JSX.Element {
   const { twitch } = props.state
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -25,23 +26,6 @@ function TwitchConnection(props: PageProps): React.JSX.Element {
   </section>
 }
 
-export function SetupPage(props: PageProps): React.JSX.Element {
-  const account = props.state.twitch.account
-  return <div data-page="setup" className="setup-layout"><div className="main-column">
-    <div className="welcome-banner"><span>✦</span><div><span className="eyebrow">WELCOME TO YOUR NEXT CHAPTER</span><h2>Less setup. More show.</h2><p>Connect your channel, then open Live to select capture sources and audio. Guided automatic setup follows in P5.</p></div></div>
-    <TwitchConnection {...props} /><section className="panel"><PanelTitle title="Ready when you are" detail="READINESS" /><div className="checklist">
-      <Check ready={props.info.secureStorageAvailable} title="Secure desktop storage" detail={props.info.secureStorageAvailable ? 'Windows encryption is available for credentials.' : 'Restart Windows and try again.'} />
-      <Check ready={Boolean(props.state.twitch.clientId)} title="Public Twitch Client ID" detail={props.state.twitch.clientId ? 'Your application ID is configured.' : 'Add your public Client ID in Settings.'} />
-      <Check ready={props.state.twitch.phase === 'connected'} title="Twitch chat and events" detail={account ? props.state.twitch.message : 'Sign in to your channel to connect chat.'} />
-      <Check ready={props.engine.previewActive} title="Streaming engine beta" detail={props.engine.previewActive ? props.engine.message : 'Open Live, start preview and verify sources before a private bandwidth test.'} />
-    </div></section>
-  </div><aside className="side-column"><section className="panel"><PanelTitle title="Your first five minutes" /><ol className="setup-roadmap"><li><b>Connect Twitch</b><span>Device login. Your account stays yours.</span></li><li><b>Find your devices</b><span>Displays, camera and audio are in Live.</span></li><li><b>Check your connection</b><span>Start a private bandwidth test from Live.</span></li><li><b>Set the scene</b><span>Widgets and your own style. In P3 + P4.</span></li><li><b>Go make a moment</b><span>Finish the ready-to-stream checklist.</span></li></ol></section>
-    <button className="secondary full" onClick={() => props.go('live')}>Open Live workspace ↗</button></aside></div>
-}
-function Check({ ready, title, detail }: { ready: boolean; title: string; detail: string }): React.JSX.Element {
-  return <div className={`check-row ${ready ? 'ready' : ''}`}><span>{ready ? '✓' : '○'}</span><div><strong>{title}</strong><p>{detail}</p></div></div>
-}
-
 export function SettingsPage(props: PageProps): React.JSX.Element {
   const [clientId, setClientId] = useState(props.state.twitch.clientId)
   const [saved, setSaved] = useState(false)
@@ -56,6 +40,7 @@ export function SettingsPage(props: PageProps): React.JSX.Element {
       {!props.state.twitch.subscriptions.length ? <p className="muted">Connect Twitch to see which events your channel can receive.</p> : <div className="subscriptions">{props.state.twitch.subscriptions.map(subscription => <div key={subscription.type}><div><strong>{subscription.type.replace('channel.channel_points_custom_reward_redemption.add', 'channel.point_redemption')}</strong><p>{subscription.detail}</p></div><span className={`subscription-status ${subscription.status}`}>{subscription.status.toUpperCase()}</span></div>)}</div>}
     </section></div><div className="side-column"><section className="panel"><PanelTitle title="Your AI workspace" /><p className="muted">{props.ai.settings.model || 'No model selected'}</p><p className="muted">Generate widgets or review viewer ideas in Studio. Every build passes the same isolated test before publishing.</p><button className="secondary" onClick={() => props.go('studio')}>Open AI Studio ↗</button></section>
     <OutputSettings {...props} />
+    <SetupRepair {...props} />
     <section className="panel"><PanelTitle title="Devices & hotkeys" /><p className="muted">Capture sources and the audio mixer are in Live. Global scene shortcuts work while another app has focus.</p>{props.widgets.hotkeys.map(item => <p key={item.scene}><strong>{item.scene.toUpperCase()}</strong><br /><span className="muted">{item.accelerator} · {item.registered ? 'Registered' : 'Unavailable: another app may use it'}</span></p>)}<button className="secondary" onClick={() => props.go('live')}>Open capture controls ↗</button></section>
     <section className="panel"><PanelTitle title="Repair connection" /><p className="muted">Revalidate the saved Twitch login and recreate event subscriptions.</p><button className="secondary full" disabled={props.busy || !props.state.twitch.clientId} onClick={() => { void props.action('Repairing Twitch', () => window.rapidcast.retryTwitch()) }}>↻ Repair Twitch connection</button></section>
   </div></div>

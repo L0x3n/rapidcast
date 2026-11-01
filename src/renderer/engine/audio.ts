@@ -15,6 +15,10 @@ export class AudioMixer {
   private testOscillator: OscillatorNode | null = null
   private testGain: GainNode | null = null
   private testTimer: ReturnType<typeof setInterval> | null = null
+  capabilities(): string[] {
+    return [...(this.mic?.getAudioTracks().some(track => track.readyState === 'live') ? [`microphone:${this.micId}`] : []),
+      ...(this.desktopNode?.mediaStream.getAudioTracks().some(track => track.readyState === 'live') ? ['desktop-audio-live'] : [])]
+  }
   constructor() {
     this.micMeter.fftSize = 512; this.desktopMeter.fftSize = 512
     this.micGain.connect(this.micMeter).connect(this.destination)

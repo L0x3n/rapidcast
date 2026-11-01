@@ -10,7 +10,7 @@ export function drawProgram(ctx: CanvasRenderingContext2D, layers: Layer[], sour
     if (layer.kind === 'color') { ctx.fillStyle = layer.color; ctx.fillRect(layer.x, layer.y, layer.width, layer.height) }
     else if (layer.kind === 'text') {
       ctx.beginPath(); ctx.rect(layer.x, layer.y, layer.width, layer.height); ctx.clip()
-      ctx.fillStyle = layer.color; ctx.font = `900 ${Math.min(140, layer.height * .75)}px 'Segoe UI', sans-serif`; ctx.textBaseline = 'middle'
+      ctx.fillStyle = layer.color; ctx.font = `900 ${Math.min(140, layer.height * .75)}px '${layer.font || 'Segoe UI'}', sans-serif`; ctx.textBaseline = 'middle'
       ctx.shadowColor = '#00000080'; ctx.shadowBlur = 20; ctx.fillText(layer.text, layer.x, layer.y + layer.height / 2, layer.width)
     } else if (layer.kind === 'widget') drawWidget(ctx, layer, widgets.frames, widgets.statuses)
     else {
