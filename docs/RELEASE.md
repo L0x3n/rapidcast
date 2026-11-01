@@ -46,7 +46,7 @@ Package contents are allowlisted to compiled main/preload/renderer/overlay files
 | P6 long statistics run | Preserved 602.815-second local/minimized run, exactly 720 simulator messages and one visible trigger; not real audience/network evidence. |
 | P7 sharing | Two-profile native export/import passed, with eight tested configurations, four-scene/theme/params/image/credit persistence and decoded local output. |
 
-The scanner also self-tests its boundary: the known public ID at its config path passes, while the same value at another path and a changed value at the same config path must still be detected. These test findings are synthetic public-ID strings, never real tokens, and their reports are redacted.
+The scanner also self-tests its boundary: the known public ID at its config path passes, while the same value at another path and a changed value at the same config path must still be detected. The exception is attached only to the Twitch-token rule; it does not skip the entire config file. These test findings are synthetic public-ID strings, never real tokens, and their reports are redacted.
 
 The final clean-clone report and portable manifest identify the exact checked commit. The local v1.0 tag is added only after release tooling, the final scan and committed clean-clone checks pass. Passing automated checks does not mark the manual rows below as passed.
 
