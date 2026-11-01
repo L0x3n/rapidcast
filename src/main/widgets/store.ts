@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { validateWidgetCode } from '../../shared/widget-validation'
-import { validParams, type WidgetDefinition, type WidgetInstance, type Transition } from '../../shared/widgets'
+import { validParams, validCredit, type WidgetDefinition, type WidgetInstance, type Transition } from '../../shared/widgets'
 import { record } from '../../shared/events'
 import { builtinWidgets } from './builtins'
 
@@ -24,7 +24,7 @@ export class WidgetStore {
       const data = record(JSON.parse(source))
       if (Array.isArray(data.definitions)) for (const raw of data.definitions.slice(0, 64)) {
         const value = record(raw)
-        if (typeof value.code === 'string' && typeof value.id === 'string' && /^custom-[a-f0-9-]{36}$/.test(value.id)) this.definitions.push(this.definition(value.id, value.code))
+        if (typeof value.code === 'string' && typeof value.id === 'string' && /^custom-[a-f0-9-]{36}$/.test(value.id)) this.definitions.push({ ...this.definition(value.id, value.code), ...(validCredit(value.credit) ? { credit: value.credit } : {}) })
       }
       if (Array.isArray(data.instances)) for (const raw of data.instances.slice(0, 32)) {
         const value = record(raw)
@@ -40,9 +40,10 @@ export class WidgetStore {
   definition(id: string, code: string): WidgetDefinition {
     return { id, code, meta: validateWidgetCode(code).meta, builtin: false, version: createHash('sha256').update(code).digest('hex').slice(0, 16) }
   }
-  install(code: string): WidgetDefinition {
+  install(code: string, credit = ''): WidgetDefinition {
     if (this.definitions.length >= 64) throw new Error('The library has reached its 64-widget limit. Use an existing widget.')
     const definition = this.definition(`custom-${randomUUID()}`, code)
+    if (validCredit(credit)) definition.credit = credit
     this.definitions.push(definition)
     return definition
   }

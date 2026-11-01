@@ -4,13 +4,15 @@ import { join } from 'node:path'
 import { record } from '../../shared/events'
 import { makeLayer, type EngineSettings } from '../../shared/engine'
 import { SCENES, type SceneId } from '../../shared/scenes'
-import { validParams, widgetGeneration, type OverlaySnapshot, type WidgetState, type WidgetStatus, type Transition } from '../../shared/widgets'
+import { validParams, validCredit, widgetGeneration, type OverlaySnapshot, type WidgetState, type WidgetStatus, type Transition } from '../../shared/widgets'
 import type { StudioState } from '../../shared/contracts'
 import type { Engine } from '../engine/controller'
 import type { Studio } from '../studio'
 import { WidgetStore } from './store'
 import { OverlayServer } from './server'
 import { HostImages } from './images'
+import { simulatedEvent, SIMULATIONS } from '../../shared/simulator'
+import type { WidgetDefinition } from '../../shared/widgets'
 
 export class Widgets {
   readonly store: WidgetStore
@@ -23,12 +25,13 @@ export class Widgets {
   private seen = new Set<string>()
   private initialized = false
   private readonly images: HostImages
+  private candidates = new Map<string, WidgetDefinition>()
   constructor(directory: string, private readonly engine: Engine, private readonly studio: Studio,
     parentOrigin: string, private readonly publish: (state: WidgetState) => void, testMode = false) {
     this.store = new WidgetStore(directory); this.stream = studio.snapshot()
     this.images = new HostImages(id => studio.publicAvatar(id))
     this.server = new OverlayServer(join(__dirname, '../overlay'), { snapshot: () => this.overlaySnapshot(),
-      definition: id => this.store.definitions.find(item => item.id === id), report: value => this.report(value), image: key => this.images.get(key) }, parentOrigin, testMode)
+      definition: id => this.store.definitions.find(item => item.id === id) ?? this.candidates.get(id), report: value => this.report(value), image: key => this.images.get(key), test: id => this.testSnapshot(id) }, parentOrigin, testMode)
   }
   async initialize(): Promise<void> {
     const exists = await this.store.load()
@@ -90,7 +93,7 @@ export class Widgets {
     if (this.seen.size > 1000) this.seen = new Set(state.events.map(event => `${event.source}:${event.id}`))
     if (previous.activeScene !== state.activeScene || cleared) this.changed()
   }
-  async add(definitionId: string, scene: SceneId): Promise<void> {
+  async add(definitionId: string, scene: SceneId, credit = ''): Promise<string> {
     const definition = this.store.definitions.find(item => item.id === definitionId)
     if (!definition) throw new Error('Choose a widget from the library.')
     const settings = this.engine.snapshot().settings
@@ -98,14 +101,39 @@ export class Widgets {
     const id = `widget-${randomUUID()}`
     const position: Record<string, [number, number]> = { 'builtin-chat': [1420, 240], 'builtin-alerts': [580, 70], 'builtin-countdown': [600, 440], 'builtin-ticker': [210, 970], 'builtin-goal': [40, 790] }
     const [x, y] = position[definitionId] ?? [600, 250]
-    const layer = { ...makeLayer(id, 'widget'), name: definition.meta.name, source: definitionId,
+    const layer = { ...makeLayer(id, 'widget'), name: definition.meta.name, source: definitionId, text: validCredit(credit) ? credit : definition.credit || '',
       x, y, width: definition.meta.defaultSize.w, height: definition.meta.defaultSize.h, z: 20 + settings.scenes[scene].filter(item => item.kind === 'widget').length }
     this.store.create(id, definition)
     try { await this.engine.configure({ ...settings, scenes: { ...settings.scenes, [scene]: [...settings.scenes[scene], layer] } }) }
     catch (error: unknown) { this.store.instances = this.store.instances.filter(item => item.id !== id); throw error }
     await this.store.save(); this.changed()
+    return id
   }
-  async install(code: string): Promise<string> { const definition = this.store.install(code); await this.store.save(); this.changed(); return definition.id }
+  candidate(code: string): WidgetDefinition {
+    if (this.candidates.size >= 4) throw new Error('Close an older test preview before creating another widget.')
+    const definition = this.store.definition(`candidate-${randomUUID()}`, code)
+    this.candidates.set(definition.id, definition); return definition
+  }
+  discardCandidate(id: string): void { this.candidates.delete(id) }
+  private testSnapshot(id: string): OverlaySnapshot | null {
+    const definition = this.candidates.get(id); if (!definition) return null
+    const layer = { ...makeLayer(id, 'widget'), source: id, width: definition.meta.defaultSize.w, height: definition.meta.defaultSize.h }
+    return { revision: 1, activeScene: 'live', scenes: { starting: [], live: [layer], brb: [], ending: [] }, definitions: [definition],
+      instances: [{ id, params: validParams(definition.meta.params, {}), disabled: false, reason: '', createdAt: Date.now() }],
+      events: SIMULATIONS.map(type => simulatedEvent(type, `preflight-${type}`)), transition: 'cut' }
+  }
+  async replace(id: string, code: string): Promise<void> {
+    const settings = structuredClone(this.engine.snapshot().settings)
+    const layer = Object.values(settings.scenes).flat().find(item => item.id === id && item.kind === 'widget')
+    const instance = this.store.instances.find(item => item.id === id)
+    if (!layer || !instance) throw new Error('The original widget was removed. Generate a new widget instead.')
+    const definition = this.store.install(code, validCredit(layer.text) ? layer.text : '')
+    layer.source = definition.id; layer.name = definition.meta.name; layer.width = definition.meta.defaultSize.w; layer.height = definition.meta.defaultSize.h
+    await this.engine.configure(settings)
+    instance.params = validParams(definition.meta.params, {}); instance.createdAt = Math.max(Date.now(), instance.createdAt + 1); instance.disabled = false; instance.reason = ''
+    this.statuses.delete(id); await this.store.save(); this.changed()
+  }
+  async install(code: string, credit = ''): Promise<string> { const definition = this.store.install(code, credit); await this.store.save(); this.changed(); return definition.id }
   async params(id: string, params: unknown): Promise<void> {
     const instance = this.store.instances.find(item => item.id === id)
     const layer = Object.values(this.engine.snapshot().settings.scenes).flat().find(item => item.id === id)

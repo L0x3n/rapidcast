@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { PageProps } from '../types'
 import { EventFeed, PanelTitle } from '../components'
 import { OutputSettings } from '../engine-controls/Output'
+import { AiSettingsPanel } from '../AiSettings'
 
 function TwitchConnection(props: PageProps): React.JSX.Element {
   const { twitch } = props.state
@@ -45,7 +46,7 @@ export function SettingsPage(props: PageProps): React.JSX.Element {
   const [clientId, setClientId] = useState(props.state.twitch.clientId)
   const [saved, setSaved] = useState(false)
   useEffect(() => { setClientId(props.state.twitch.clientId) }, [props.state.twitch.clientId])
-  return <div data-page="settings" className="settings-layout"><div className="main-column"><section className="panel"><PanelTitle title="Twitch application" detail="PUBLIC CLIENT" />
+  return <div data-page="settings" className="settings-layout"><div className="main-column"><AiSettingsPanel {...props} /><section className="panel"><PanelTitle title="Twitch application" detail="PUBLIC CLIENT" />
     <p className="muted">Use a Twitch application registered with Client Type set to Public. No client secret is needed.</p>
     <form onSubmit={event => { event.preventDefault(); void props.action('Saving Client ID', () => window.rapidcast.saveClientId(clientId)).then(setSaved) }}>
       <label>Public Client ID<input placeholder="Paste your public Twitch Client ID" autoComplete="off" spellCheck={false} maxLength={128} value={clientId} onChange={event => { setClientId(event.target.value); setSaved(false) }} /></label>
@@ -53,7 +54,7 @@ export function SettingsPage(props: PageProps): React.JSX.Element {
     </form></section><TwitchConnection {...props} />
     <section className="panel"><PanelTitle title="Event subscriptions" detail={`${props.state.twitch.subscriptions.filter(s => s.status === 'enabled').length} ACTIVE`} />
       {!props.state.twitch.subscriptions.length ? <p className="muted">Connect Twitch to see which events your channel can receive.</p> : <div className="subscriptions">{props.state.twitch.subscriptions.map(subscription => <div key={subscription.type}><div><strong>{subscription.type.replace('channel.channel_points_custom_reward_redemption.add', 'channel.point_redemption')}</strong><p>{subscription.detail}</p></div><span className={`subscription-status ${subscription.status}`}>{subscription.status.toUpperCase()}</span></div>)}</div>}
-    </section></div><div className="side-column"><section className="panel"><PanelTitle title="AI provider" detail="IN P4" /><div className="provider-badge">✦ <strong>Bring your own model</strong></div><p className="muted">OpenAI, OpenRouter, Ollama, LM Studio or a custom OpenAI-compatible endpoint.</p><p className="muted">No AI is required for Twitch, chat or the event simulator.</p></section>
+    </section></div><div className="side-column"><section className="panel"><PanelTitle title="Your AI workspace" /><p className="muted">{props.ai.settings.model || 'No model selected'}</p><p className="muted">Generate widgets or review viewer ideas in Studio. Every build passes the same isolated test before publishing.</p><button className="secondary" onClick={() => props.go('studio')}>Open AI Studio ↗</button></section>
     <OutputSettings {...props} />
     <section className="panel"><PanelTitle title="Devices & hotkeys" /><p className="muted">Capture sources and the audio mixer are in Live. Global scene shortcuts work while another app has focus.</p>{props.widgets.hotkeys.map(item => <p key={item.scene}><strong>{item.scene.toUpperCase()}</strong><br /><span className="muted">{item.accelerator} · {item.registered ? 'Registered' : 'Unavailable: another app may use it'}</span></p>)}<button className="secondary" onClick={() => props.go('live')}>Open capture controls ↗</button></section>
     <section className="panel"><PanelTitle title="Repair connection" /><p className="muted">Revalidate the saved Twitch login and recreate event subscriptions.</p><button className="secondary full" disabled={props.busy || !props.state.twitch.clientId} onClick={() => { void props.action('Repairing Twitch', () => window.rapidcast.retryTwitch()) }}>↻ Repair Twitch connection</button></section>

@@ -5,6 +5,7 @@ import { SetupPage, SettingsPage, StatsPage } from './pages/AccountPages'
 import type { Action, PageProps, Tab } from './types'
 import type { EngineState } from '../shared/engine'
 import type { WidgetState } from '../shared/widgets'
+import type { AiState } from '../shared/ai'
 
 const tabs: { id: Tab; name: string; icon: string; description: string }[] = [
   { id: 'live', name: 'Live', icon: '◉', description: 'Your stage, your rules.' },
@@ -20,8 +21,10 @@ export function App(): React.JSX.Element {
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [engine, setEngine] = useState<EngineState | null>(null)
   const [widgets, setWidgets] = useState<WidgetState | null>(null)
+  const [ai, setAi] = useState<AiState | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
+  useEffect(() => { document.querySelector('.page-content')?.scrollTo(0, 0) }, [tab])
   useEffect(() => {
     let active = true
     const apply = (incoming: StudioState): void => {
@@ -32,12 +35,15 @@ export function App(): React.JSX.Element {
     const unsubscribeEngine = window.rapidcast.onEngine(applyEngine)
     const applyWidgets = (incoming: WidgetState): void => { if (active) setWidgets(current => !current || incoming.revision >= current.revision ? incoming : current) }
     const unsubscribeWidgets = window.rapidcast.onWidgets(applyWidgets)
+    const applyAi = (incoming: AiState): void => { if (active) setAi(current => !current || incoming.revision >= current.revision ? incoming : current) }
+    const unsubscribeAi = window.rapidcast.onAi(applyAi)
+    window.rapidcast.getAi().then(applyAi).catch(() => { if (active) setError('The AI service could not connect. Restart RapidCast.') })
     window.rapidcast.getWidgets().then(applyWidgets).catch(() => { if (active) setError('The widget service could not connect. Restart RapidCast.') })
     window.rapidcast.getEngine().then(applyEngine).catch(() => { if (active) setError('The engine could not connect. Restart RapidCast.') })
     Promise.all([window.rapidcast.getAppInfo(), window.rapidcast.getStudio()]).then(([appInfo, studio]) => {
       if (active) { setInfo(appInfo); apply(studio) }
     }).catch(() => { if (active) setError('The desktop connection could not start. Restart RapidCast and try again.') })
-    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets() }
+    return () => { active = false; unsubscribe(); unsubscribeEngine(); unsubscribeWidgets(); unsubscribeAi() }
   }, [])
 
   const action: Action = async (label, run) => {
@@ -52,7 +58,7 @@ export function App(): React.JSX.Element {
   }
   const current = tabs.find(item => item.id === tab) ?? tabs[0]!
   const titles: Record<Tab, string> = { live: 'Run the show.', studio: 'Build the unexpected.', setup: 'Your first great stream.', stats: 'Read the room.', settings: 'Your studio. Your way.' }
-  const props: PageProps | null = state && info && engine && widgets ? { state, info, engine, widgets, action, busy: Boolean(busy), go: setTab } : null
+  const props: PageProps | null = state && info && engine && widgets && ai ? { state, info, engine, widgets, ai, action, busy: Boolean(busy), go: setTab } : null
 
   return <div className="app-shell" data-app-ready={props ? 'true' : 'false'}>
     <aside className="sidebar">
@@ -61,7 +67,7 @@ export function App(): React.JSX.Element {
       <nav aria-label="Main navigation">{tabs.map(item => <button key={item.id} data-tab={item.id}
         className={`nav-item ${tab === item.id ? 'active' : ''}`} aria-current={tab === item.id ? 'page' : undefined}
         onClick={() => setTab(item.id)}><span aria-hidden="true">{item.icon}</span>{item.name}{tab === item.id && <i />}</button>)}</nav>
-      <div className="sidebar-bottom"><span className="accent">✦ BUILT WITH CODEX</span><p>Big ideas.<br />Live possibilities.</p><span className="mono muted">ENGINE BETA · WIDGETS READY</span></div>
+      <div className="sidebar-bottom"><span className="accent">✦ BUILT WITH CODEX</span><p>Big ideas.<br />Live possibilities.</p><span className="mono muted">ENGINE BETA · AI STUDIO</span></div>
     </aside>
     <div className="workspace">
       <header className="topbar"><div className="breadcrumb">YOUR WORKSPACE<span>/</span><strong>{current.name.toUpperCase()}</strong></div>

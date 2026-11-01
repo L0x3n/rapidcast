@@ -6,7 +6,8 @@ import type { ActionResult } from './contracts'
 export type ParamValue = string | number | boolean
 export interface ParamSchema { type: 'number' | 'string' | 'color' | 'boolean'; default: ParamValue; min?: number; max?: number }
 export interface WidgetMeta { name: string; description: string; defaultSize: { w: number; h: number }; params: Record<string, ParamSchema> }
-export interface WidgetDefinition { id: string; code: string; meta: WidgetMeta; builtin: boolean; version: string }
+export interface WidgetDefinition { id: string; code: string; meta: WidgetMeta; builtin: boolean; version: string; credit?: string }
+export const validCredit = (value: unknown): value is string => typeof value === 'string' && /^idea by @[a-zA-Z0-9_]{1,25}(?: · TEST)?$/.test(value)
 export interface WidgetInstance { id: string; params: Record<string, ParamValue>; createdAt: number; disabled: boolean; reason: string }
 export interface WidgetStatus { id: string; state: 'loading' | 'ready' | 'disabled'; reason: string; frames: number; triggers: number; renderMs: number }
 export type Transition = 'cut' | 'fade' | 'swipe'

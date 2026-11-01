@@ -10,6 +10,7 @@ interface ServerHooks {
   definition(id: string): WidgetDefinition | undefined
   report(value: unknown): void
   image(key: string): Promise<{ bytes: Buffer; mime: string } | null>
+  test?(id: string): OverlaySnapshot | null
 }
 export class OverlayServer {
   private server: Server | null = null
@@ -66,6 +67,8 @@ export class OverlayServer {
     }
     if (request.method !== 'GET') { response.writeHead(405); response.end(); return }
     if (path === '/api/snapshot') { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(this.hooks.snapshot())); return }
+    const test = path.match(/^\/api\/test\/([a-zA-Z0-9_-]{1,80})$/)
+    if (test) { const snapshot = this.hooks.test?.(test[1]!); if (!snapshot) { response.writeHead(404); response.end(); return }; response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify(snapshot)); return }
     if (path === '/api/events') {
       if (this.clients.size >= 12) { response.writeHead(429); response.end('Too many overlay connections.'); return }
       response.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' })
@@ -85,7 +88,11 @@ export class OverlayServer {
       const definition = this.hooks.definition(worker[1]!)
       if (!definition) { response.writeHead(404); response.end(); return }
       let source = this.workerCache.get(definition.version)
-      if (!source) { source = `function createWidget(){'use strict';\n${validateWidgetCode(definition.code).factoryBody}\n}\n${harness}(createWidget);`; this.workerCache.set(definition.version, source) }
+      if (!source) {
+        source = `function createWidget(){'use strict';\n${validateWidgetCode(definition.code).factoryBody}\n}\n${harness}(createWidget);`
+        if (this.workerCache.size >= 96) { const first = this.workerCache.keys().next().value; if (first) this.workerCache.delete(first) }
+        this.workerCache.set(definition.version, source)
+      }
       response.end(source); return
     }
     if (path.startsWith('/probe-hit')) { this.probeRequests++; response.writeHead(204); response.end(); return }
@@ -100,10 +107,10 @@ export class OverlayServer {
       response.setHeader('Content-Type', path.endsWith('.js') ? 'text/javascript; charset=utf-8' : 'text/css; charset=utf-8')
       response.end(await readFile(join(this.directory, path.slice(1)))); return
     }
-    if (/^\/overlay\/(starting|live|brb|ending|program)$/.test(path) || /^\/widget\/[a-zA-Z0-9_-]{1,80}$/.test(path) || path === '/runtime/frame') {
+    if (/^\/overlay\/(starting|live|brb|ending|program)$/.test(path) || /^\/(widget|test)\/[a-zA-Z0-9_-]{1,80}$/.test(path) || path === '/runtime/frame') {
       response.setHeader('Content-Type', 'text/html; charset=utf-8')
       response.setHeader('Content-Security-Policy', `default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' ${this.parentOrigin}`)
-      response.end(await readFile(join(this.directory, 'index.html'))); return
+      response.end(await readFile(join(this.directory, path.startsWith('/test/') ? 'test.html' : 'index.html'))); return
     }
     response.writeHead(404); response.end('Open an overlay URL from RapidCast Studio.')
   }

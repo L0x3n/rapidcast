@@ -9,7 +9,7 @@ export type StreamEvent = EventBase & (
   | { type: 'sub'; user: StreamUser; tier: string; months: number; gifted: boolean; count: number; kind: 'new' | 'gift' | 'resub' }
   | { type: 'cheer'; user: StreamUser; bits: number; text: string }
   | { type: 'raid'; from: StreamUser; viewers: number }
-  | { type: 'redeem'; user: StreamUser; reward: string; input: string }
+  | { type: 'redeem'; user: StreamUser; reward: string; rewardId?: string; input: string }
   | { type: 'streamOnline' | 'streamOffline' }
 )
 
@@ -52,7 +52,7 @@ export function normalizeEvent(type: string, value: unknown, id: string, at: str
     case 'channel.cheer': return { ...base, type: 'cheer', user: user(event), bits: count(event.bits), text: text(event.message) }
     case 'channel.raid': return { ...base, type: 'raid', from: user(event, 'from_broadcaster_user'), viewers: count(event.viewers) }
     case 'channel.channel_points_custom_reward_redemption.add':
-      return { ...base, type: 'redeem', user: user(event), reward: text(record(event.reward).title), input: text(event.user_input) }
+      return { ...base, type: 'redeem', user: user(event), reward: text(record(event.reward).title), ...(text(record(event.reward).id) ? { rewardId: text(record(event.reward).id) } : {}), input: text(event.user_input) }
     case 'stream.online': return { ...base, type: 'streamOnline' }
     case 'stream.offline': return { ...base, type: 'streamOffline' }
     default: return null

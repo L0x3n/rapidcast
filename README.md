@@ -2,7 +2,7 @@
 
 An AI-native Twitch studio where viewers help build the show. Built with Codex in one continuous chat for the Codex x TwitchCon Hackathon.
 
-**Current stage: P3, v0.1 widgets and scenes; streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, capture/audio, local MP4 recording, Twitch output, five canvas widgets, transitions, global scene hotkeys and transparent OBS overlays. AI generation arrives in P4. Preview, recording, simulation and OBS overlays work without an account or AI key.
+**Current stage: P4, v0.2 AI Studio and viewer ideas; streaming engine beta.** Five tabs provide Twitch chat/events, a separate 1080p compositor, capture/audio, local MP4 recording, Twitch output, five canvas widgets, transitions, hotkeys, OBS overlays, optional AI generation/prompt editing and screened viewer suggestions. Preview, recording, simulation and builtin/OBS widgets work without an account or AI key.
 
 Twitch transport and OAuth are implemented and covered by controlled integration tests. Real-account login and the under-two-second chat acceptance check still need Linus's public Client ID and interactive login. They have not been claimed as verified.
 
@@ -33,6 +33,7 @@ npm run build
 npm run smoke
 npm run smoke:engine
 npm run smoke:widgets
+npm run smoke:ai
 npm run check:rtmp
 ```
 
@@ -44,11 +45,13 @@ Earlier Electron screenshot attempts returned `UnknownVizError`; recent engine t
 
 `smoke:widgets` proves a simulated follow appears in the compositor, verifies the transparent OBS canvas and separate widget renderer process, probes enforced Worker network/eval/DOM/Node restrictions, and injects throwing and infinite-loop widgets during an uninterrupted recording. It also tests scene changes, runtime heartbeat failure and recovery. Evidence is saved in `out/widget-smoke/`. See [P3 tests and widget contract](docs/P3-TESTS.md). The automated browser-source check uses Electron Chromium; importing the URL in OBS itself remains a manual check.
 
+`smoke:ai` uses a local, explicitly mocked OpenAI-compatible endpoint and real Electron/Workers/FFmpeg. It tests encrypted key restoration and isolation, models/completion requests, suggestion screening, static/runtime failures and two repairs, three-second preflight, approval/publication, program pixels and credit, prompt edits, automatic publishing after approval, cancellation and continuous recording. Evidence is in `out/ai-smoke/`. It does not call a paid model or Twitch. Real provider quality/latency and the second-account acceptance remain unverified; see [P4 acceptance](docs/P4-TESTS.md).
+
 ## Configuration and security
 
 The public Twitch Client ID belongs in `config/public.json` and is currently blank pending Linus's ID. A local Settings override is available. A client secret is never needed. Do not put tokens, stream keys or AI keys in that file or paste them into chat.
 
-Twitch tokens are encrypted through Electron safeStorage in the main process under the OS app data directory. There is no plaintext fallback. Settings are JSON; the encrypted login is `twitch.bin`. The renderer has no Node access and only specific validated IPC actions. No access/refresh token or private device code is exposed to it. Widgets receive public events and host-fetched images, run in individual Workers in a separate renderer process, and cannot use network or eval. Static validation, enforced Worker CSP and host watchdogs work together. AI generation is not implemented yet.
+Twitch tokens and AI keys are encrypted through Electron safeStorage in the main process under the OS app data directory. There is no plaintext fallback. Settings are JSON; encrypted credentials are `twitch.bin` and `ai-key.bin`. The renderer has no Node access and only specific validated IPC actions. No saved key, token or private device code is returned to it. Widgets receive public events and host-fetched images, run in individual Workers in a separate renderer process, and cannot use network or eval. Static validation, enforced Worker CSP and host watchdogs work together.
 
 ## Connect Twitch
 
@@ -56,7 +59,7 @@ Twitch tokens are encrypted through Electron safeStorage in the main process und
 2. Open Settings, paste the public Client ID and click **Save Client ID**. Changing the ID disconnects the previous account.
 3. Click **Connect Twitch**. RapidCast shows a large code, opens Twitch in your browser and polls until you authorize. Log in and approve in the browser yourself. You can cancel or reopen the activation page.
 4. Verify **Chat and live events are connected**. Settings lists enabled, unavailable and revoked subscriptions. Non-Affiliate channels retain chat, follows, raids and online/offline events; monetized event types show their requirements.
-5. Send a message on your Twitch channel and watch it appear in Live. The composer sends as your connected account. Own messages are marked YOU and normalized with `own: true` for the future command parser.
+5. Send a message on your Twitch channel and watch it appear in Live. The composer sends as your connected account. Own messages are marked YOU and ignored by the !widget suggestion parser.
 
 Tokens refresh automatically, with a single refresh shared by concurrent requests. Twitch validation runs at startup and hourly; expiry is checked every minute. Network drops and keepalive timeouts trigger EventSub reconnection. Planned reconnects keep the old socket until the replacement welcome; ordinary drops recreate subscriptions. Events missed during an outage cannot be replayed by Twitch. Disconnect clears local credentials and attempts server revocation.
 
@@ -84,9 +87,20 @@ In Studio, copy **Follow active scene** or a fixed scene's OBS URL. Add an OBS B
 
 Advanced users can install a widget ES module through Studio's code panel. Every installation uses the same validator and Worker isolation. Errors or deadlines produce a visible WIDGET PAUSED badge; output continues. Edit parameters/restart after fixing a widget, or remove it. A runtime-process failure pauses widgets together and Restart reconnects the runtime. See [the widget API and limits](docs/P3-TESTS.md).
 
+## AI Studio
+
+1. In Settings, choose OpenAI, OpenRouter, Ollama, LM Studio or Custom. Enter the OpenAI-compatible base URL, optional API key and a text model ID. Save, List models, select an ID, Save again, then Test connection. Remote URLs require HTTPS; HTTP loopback is allowed. A blank key keeps the saved key only for the same endpoint. Changing endpoints clears it.
+2. In Studio, describe a widget or choose a placed widget in Build mode and describe an edit. The pipeline shows Writing, Testing, Fixing and Ready. Every module passes static validation and three seconds of simulated events in the same Worker sandbox; at most two repairs. Preview first, then Publish. Prompt edits keep the original on the scene until publication and retain its instance/credit.
+3. Enable Accept viewer suggestions. Viewers use `!widget <idea>`; own messages are ignored. Up to 400 characters, per-user cooldown (60 seconds by default), one global intake per five seconds and 20 active queue entries. AI screening must explicitly pass before Approve. Reject or Edit and screen again. AI screening can make mistakes: review the idea and preview yourself.
+4. By default, approval builds a preview and waits for Publish. The explicit auto-publish option authorizes publication after your approval and a passed test. Viewer widgets receive a host-drawn `idea by @user` credit. Real Twitch suggestions get a host chat acknowledgment after publication; local simulations never send chat. Account changes prevent approval/publication for another channel.
+5. Affiliate/Partner channels can create/update the app-owned Suggest a widget channel point reward in Studio. Its exact reward ID is matched; chat commands remain the fallback. Pause the reward in Twitch when closing RapidCast or disabling intake. Test the full real-model/second-account path in [P4-TESTS.md](docs/P4-TESTS.md).
+
+Large local models can compete for GPU/memory while recording. Provider calls may incur charges. Use a text model that supports Chat Completions; the output-token field is configurable for compatibility. Configuration follows [OpenAI's Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create), [Ollama compatibility](https://docs.ollama.com/api/openai-compatibility), [LM Studio endpoints](https://lmstudio.ai/docs/developer/openai-compat) and [OpenRouter's reference](https://openrouter.ai/docs/api_reference/overview). Codex SDK/ChatGPT sign-in is optional in the brief and is not included in this version.
+
 ## Project map
 
 - `src/main`: privileged desktop services.
+- `src/main/ai`: provider transport, encrypted settings, generation/repair, isolated testing and suggestion approvals.
 - `src/preload`: typed, narrow bridge into the UI.
 - `src/renderer`: React studio UI.
 - `src/overlay`: shared browser-source/isolated widget host.

@@ -35,6 +35,7 @@ npm run build
 npm run smoke
 npm run smoke:engine
 npm run smoke:widgets
+npm run smoke:ai
 npm run check:rtmp
 npm start
 ```
@@ -43,6 +44,7 @@ npm start
 - P1 smoke also visits all five tabs, renders follow/chat simulations, persists scene selection, checks invalid Client IDs and performs a real Windows safeStorage encryption round trip. See `docs/P1-TESTS.md` for real-account acceptance.
 - P2 `smoke:engine` performs native synthetic 1080p30/60 and CPU recordings, minimized timing, audio/video pulse comparison, and capture of the test app's own window. `check:rtmp` uses loopback only and verifies receiver-disconnect recovery plus simultaneous MP4. Run these sequentially; artifacts are in ignored out/engine-smoke. See `docs/P2-TESTS.md` for the mandatory real Twitch/game tests, which remain pending.
 - P3 `smoke:widgets` verifies compositor follow pixels, transparent browser-source canvas, separate widget renderer process, enforced Worker CSP, exception/infinite-loop termination, scene changes, runtime heartbeat loss/recovery and continuous H.264/AAC recording. Artifacts are in ignored out/widget-smoke. OBS itself, real Twitch images/events and fullscreen-game hotkeys still require manual checks in `docs/P3-TESTS.md`.
+- P4 `smoke:ai` uses a marked local test endpoint and real Electron/Workers/FFmpeg. It checks encrypted key restore/no secret in public state, screening/approval, two repairs, three-second preflight, visible program/credit/events, prompt replacement, automatic publication after approval, cancellation and continuous recording. It is not a real-model quality/latency or second-account Twitch acceptance. See `docs/P4-TESTS.md`; artifacts in ignored out/ai-smoke.
 - Restart the development process after main/preload changes. A stale P0 process cannot serve the new P1 IPC API even if Vite refreshes the renderer.
 - No native Node addons or node-gyp. Prebuilt Electron and build-tool binaries are permitted. Keep `package-lock.json` committed and use npm.
 - Never execute `ffmpeg` from PATH: it is a fake Python launcher. P2 must use the absolute binary path returned by `ffmpeg-static`.
@@ -65,6 +67,7 @@ npm start
 - Local JSON/JSONL data belongs in Electron userData, not the repository. Ignore `.env*`, `data/`, `*.log`, `out/`, `dist/` and `node_modules/`.
 - Use contextIsolation, sandbox, nodeIntegration=false, CSP, sender validation and specific IPC channels. Deny arbitrary navigation, popups and permissions; add narrow device permission handling in P2.
 - AI endpoints and Twitch credentials are handled by the host. Widgets receive normalized public events and host-fetched image bitmaps only.
+- AI keys are write-only IPC input and encrypted in ai-key.bin, associated with their exact base URL. Never return them in AI state or model lists, echo provider error bodies, follow credential-bearing redirects or reuse a key after endpoint change. ai.json holds nonsecret config and a bounded suggestion queue. No AI build publishes before its isolated three-second test passes; at most two code repairs. Real viewer publication requires approval, even with auto-publish enabled. Never send simulator acknowledgments to Twitch.
 - Each widget runs in a separate Worker with OffscreenCanvas, no DOM, Node, network or tokens. Static checks alone are not isolation: enforce runtime network restrictions and watchdog termination. Widget failure must never stop the stream.
 - Validate imported packs before installation. Imported and generated code always goes through the same sandbox pipeline.
 

@@ -27,7 +27,7 @@ const running: Studio[] = []
 function setup(monetized = true) {
   FakeWebSocket.sockets = []
   vi.stubGlobal('WebSocket', FakeWebSocket)
-  const fetcher = vi.fn<typeof fetch>().mockImplementation(async input => {
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
     const url = String(input)
     let value: unknown
     if (url.endsWith('/device')) value = { device_code: 'private-device', user_code: 'ABCD', interval: 5, expires_in: 60, verification_uri: 'https://www.twitch.tv/activate?device-code=ABCD' }
@@ -37,6 +37,7 @@ function setup(monetized = true) {
     else if (url.includes('/streams/key?')) value = { data: [{ stream_key: 'fake_private_stream_key' }] }
     else if (url === 'https://ingest.twitch.tv/ingests') value = { ingests: [{ default: false, name: 'Default', url_template_secure: 'rtmps://ingest.global-contribute.live-video.net/app/{stream_key}' }] }
     else if (url.endsWith('/eventsub/subscriptions')) value = { data: [{ status: 'enabled' }] }
+    else if (url.includes('/channel_points/custom_rewards?')) value = { data: init?.method === 'GET' ? [] : [{ id: 'app-owned-reward', title: 'Suggest a widget' }] }
     else if (url.endsWith('/revoke')) return new Response('')
     else throw new Error('Unexpected endpoint')
     return new Response(JSON.stringify(value))
@@ -136,5 +137,21 @@ describe('Twitch studio integration with a fake transport', () => {
     await expect(studio.retry()).rejects.toThrow('No saved login')
     expect(studio.snapshot().twitch.phase).toBe('error')
     expect(studio.snapshot().twitch.socket).toBe('offline')
+  })
+  it('creates an input-required app-owned reward for an Affiliate channel', async () => {
+    const { studio, fetcher } = setup()
+    await studio.initialize(); await studio.connect()
+    await vi.waitFor(() => expect(FakeWebSocket.sockets).toHaveLength(1))
+    expect(await studio.suggestionReward(500)).toEqual({ channelId: 'me', id: 'app-owned-reward' })
+    const call = fetcher.mock.calls.find(([url, init]) => String(url).includes('/channel_points/custom_rewards?') && init?.method === 'POST')
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ title: 'Suggest a widget', cost: 500, is_user_input_required: true, is_global_cooldown_enabled: true })
+    expect(JSON.stringify(studio.snapshot())).not.toContain('fake-access-private')
+  })
+  it('keeps standard channels on the chat-command fallback without reward mutations', async () => {
+    const { studio, fetcher } = setup(false)
+    await studio.initialize(); await studio.connect()
+    await vi.waitFor(() => expect(FakeWebSocket.sockets).toHaveLength(1))
+    await expect(studio.suggestionReward(500)).rejects.toThrow('!widget')
+    expect(fetcher.mock.calls.some(([url]) => String(url).includes('/channel_points/custom_rewards'))).toBe(false)
   })
 })

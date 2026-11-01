@@ -3,6 +3,7 @@ import { IPC, type RapidCastApi, type StudioState } from '../shared/contracts'
 import { ENGINE_IPC, type EngineState } from '../shared/engine'
 import { exposeCompositor } from './engine'
 import { WIDGET_IPC, type WidgetState } from '../shared/widgets'
+import { AI_IPC, type AiState } from '../shared/ai'
 
 const api = Object.freeze<RapidCastApi>({
   getAppInfo: () => ipcRenderer.invoke(IPC.appInfo),
@@ -47,7 +48,21 @@ const api = Object.freeze<RapidCastApi>({
   restartWidget: id => ipcRenderer.invoke(WIDGET_IPC.restart, id),
   removeWidget: id => ipcRenderer.invoke(WIDGET_IPC.remove, id),
   setTransition: value => ipcRenderer.invoke(WIDGET_IPC.transition, value),
-  copyOverlay: scene => ipcRenderer.invoke(WIDGET_IPC.copy, scene)
+  copyOverlay: scene => ipcRenderer.invoke(WIDGET_IPC.copy, scene),
+  getAi: () => ipcRenderer.invoke(AI_IPC.state),
+  onAi: listener => { const handler = (_event: Electron.IpcRendererEvent, state: AiState): void => listener(state); ipcRenderer.on(AI_IPC.update, handler); return () => ipcRenderer.removeListener(AI_IPC.update, handler) },
+  saveAi: (settings, key) => ipcRenderer.invoke(AI_IPC.save, { settings, key }),
+  clearAiKey: () => ipcRenderer.invoke(AI_IPC.clearKey),
+  listAiModels: () => ipcRenderer.invoke(AI_IPC.models),
+  testAi: () => ipcRenderer.invoke(AI_IPC.test),
+  generateWidget: request => ipcRenderer.invoke(AI_IPC.generate, request),
+  cancelAi: () => ipcRenderer.invoke(AI_IPC.cancel),
+  publishAiDraft: id => ipcRenderer.invoke(AI_IPC.publish, id),
+  approveSuggestion: (id, scene) => ipcRenderer.invoke(AI_IPC.approve, { id, scene }),
+  rejectSuggestion: id => ipcRenderer.invoke(AI_IPC.reject, id),
+  editSuggestion: (id, idea) => ipcRenderer.invoke(AI_IPC.edit, { id, idea }),
+  simulateSuggestion: idea => ipcRenderer.invoke(AI_IPC.simulate, idea),
+  createSuggestionReward: cost => ipcRenderer.invoke(AI_IPC.reward, cost)
 })
 
 if (process.argv.includes('--rapidcast-compositor')) exposeCompositor()

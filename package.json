@@ -1,6 +1,6 @@
 {
   "name": "rapidcast",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An AI-native Twitch studio where chat helps build the stream.",
   "private": true,
   "license": "MIT",
@@ -21,6 +21,7 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke:engine": "node scripts/smoke.mjs --engine",
     "smoke:widgets": "node scripts/smoke.mjs --widgets",
+    "smoke:ai": "node scripts/smoke.mjs --ai",
     "check:rtmp": "node scripts/check-rtmp.mjs"
   },
   "dependencies": {

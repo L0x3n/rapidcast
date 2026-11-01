@@ -1,5 +1,7 @@
 # P3: widgets, scenes and browser sources
 
+P4 adds tested prompt editing for placed instances and viewer-credit persistence. See [P4-TESTS.md](P4-TESTS.md) for the later AI workflow; the P3 runtime checks below still apply.
+
 ## Automated checks
 
 Run sequentially in the repository after `npm ci`:

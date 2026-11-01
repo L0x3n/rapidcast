@@ -1,5 +1,5 @@
 import type { Layer } from '../../shared/engine'
-import type { WidgetStatus } from '../../shared/widgets'
+import { validCredit, type WidgetStatus } from '../../shared/widgets'
 
 export function drawWidget(ctx: CanvasRenderingContext2D, layer: Layer, frames: Map<string, ImageBitmap>, statuses: Map<string, WidgetStatus>): void {
   const status = statuses.get(layer.id)
@@ -12,4 +12,10 @@ export function drawWidget(ctx: CanvasRenderingContext2D, layer: Layer, frames: 
   if (!frame) return
   const crop = layer.crop
   ctx.drawImage(frame, frame.width * crop.left, frame.height * crop.top, frame.width * (1 - crop.left - crop.right), frame.height * (1 - crop.top - crop.bottom), layer.x, layer.y, layer.width, layer.height)
+  if (validCredit(layer.text)) {
+    const width = Math.min(layer.width, 340)
+    ctx.save(); ctx.fillStyle = '#101b17f5'; ctx.fillRect(layer.x, layer.y + layer.height - 27, width, 27)
+    ctx.font = 'bold 15px sans-serif'; ctx.fillStyle = '#cbfa54'; ctx.textBaseline = 'middle'
+    ctx.fillText(layer.text, layer.x + 10, layer.y + layer.height - 13, width - 20); ctx.restore()
+  }
 }

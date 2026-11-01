@@ -233,6 +233,19 @@ export class Studio {
     const result = record(Array.isArray(response.data) ? response.data[0] : null)
     if (result.is_sent !== true) throw new Error('Twitch did not send the message. Check channel moderation settings and try again.')
   }
+  async suggestionReward(cost: number): Promise<{ channelId: string; id: string }> {
+    const account = this.state.twitch.account; const helix = this.helix
+    if (!helix || !account || !['affiliate', 'partner'].includes(account.broadcasterType)) throw new Error('Channel point rewards need a connected Affiliate or Partner channel. Use !widget chat commands instead.')
+    if (!Number.isInteger(cost) || cost < 1 || cost > 1000000) throw new Error('Choose a reward cost between 1 and 1000000 channel points.')
+    const existing = await helix.call(`channel_points/custom_rewards?broadcaster_id=${account.id}&only_manageable_rewards=true`)
+    if (this.helix !== helix || this.state.twitch.account?.id !== account.id) throw new Error('The Twitch account changed. Try creating the reward again.')
+    const found = Array.isArray(existing.data) ? existing.data.map(record).find(item => item.title === 'Suggest a widget') : undefined
+    const body = { title: 'Suggest a widget', cost, prompt: 'Describe a safe interactive canvas widget (up to 400 characters). The streamer reviews every idea.', is_enabled: true, is_user_input_required: true, is_global_cooldown_enabled: true, global_cooldown_seconds: 60 }
+    const response = found ? await helix.call(`channel_points/custom_rewards?broadcaster_id=${account.id}&id=${String(found.id)}`, 'PATCH', body) : await helix.call(`channel_points/custom_rewards?broadcaster_id=${account.id}`, 'POST', body)
+    const reward = record(Array.isArray(response.data) ? response.data[0] : null)
+    if (this.helix !== helix || this.state.twitch.account?.id !== account.id || typeof reward.id !== 'string') throw new Error('The reward could not be confirmed. Check Twitch rewards and try again.')
+    return { channelId: account.id, id: reward.id }
+  }
   async outputTarget(test: boolean): Promise<string> {
     const account = this.state.twitch.account
     if (!this.helix || !account) throw new Error('Connect Twitch before starting a bandwidth test or live stream.')

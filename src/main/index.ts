@@ -15,6 +15,10 @@ import { Widgets } from './widgets/service'
 import { registerWidgetIpc } from './widgets/ipc'
 import { WIDGET_IPC } from '../shared/widgets'
 import { widgetSmoke } from './widgets/smoke'
+import { AiService } from './ai/service'
+import { registerAiIpc } from './ai/ipc'
+import { AI_IPC } from '../shared/ai'
+import { aiSmoke } from './ai/smoke'
 
 const smokeTest = process.argv.includes('--rapidcast-smoke-test')
 const smokeProfile = process.env.RAPIDCAST_SMOKE_PROFILE
@@ -24,6 +28,7 @@ app.commandLine.appendSwitch('site-per-process')
 let studio: Studio | null = null
 let engine: Engine | null = null
 let widgets: Widgets | null = null
+let ai: AiService | null = null
 let lastScene = 'starting'
 
 async function createWindow(): Promise<void> {
@@ -60,6 +65,7 @@ async function createWindow(): Promise<void> {
     const mode = engine?.snapshot().mode
     if (!state.twitch.account && (mode === 'live' || mode === 'test')) void engine?.stopOutput().catch(() => engine?.fault('Twitch disconnected. Restart the engine before sending output again.'))
     widgets?.streamChanged(state)
+    ai?.streamChanged(state)
   })
   if (!engine) { engine = new Engine(new Storage(app.getPath('userData')), app.getPath('userData'),
     smokeTest ? join(app.getPath('userData'), 'recordings') : join(app.getPath('videos'), 'RapidCast'),
@@ -76,7 +82,12 @@ async function createWindow(): Promise<void> {
   registerStudioIpc(studio, window, rendererUrl)
   registerEngineIpc(engine, window, rendererUrl)
   registerWidgetIpc(widgets, window, rendererUrl)
-  window.on('closed', () => { void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
+  if (!ai) {
+    ai = new AiService(app.getPath('userData'), widgets, engine, studio, state => { if (!window.isDestroyed()) window.webContents.send(AI_IPC.update, state) })
+    await ai.initialize()
+  }
+  registerAiIpc(ai, window, rendererUrl)
+  window.on('closed', () => { ai?.close(); void engine?.dispose().then(() => widgets?.close()).finally(() => app.quit()).catch(() => app.exit(0)) })
 
   ipcMain.removeHandler(IPC.appInfo)
   ipcMain.handle(IPC.appInfo, async (event): Promise<AppInfo> => {
@@ -97,6 +108,7 @@ async function createWindow(): Promise<void> {
     await runSmoke(window)
     if (process.argv.includes('--rapidcast-engine-test') && engine) await engineSmoke(window, engine)
     if (process.argv.includes('--rapidcast-widget-test') && engine && studio && widgets) await widgetSmoke(window, engine, studio, widgets)
+    if (process.argv.includes('--rapidcast-ai-test') && ai && engine && studio && widgets) await aiSmoke(window, ai, engine, widgets, studio)
     try {
       await window.webContents.executeJavaScript('document.fonts.ready.then(() => new Promise(resolve => setTimeout(resolve, 800)))')
       const screenshot = await window.webContents.capturePage(undefined, { stayAwake: true })
@@ -129,5 +141,5 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-app.on('before-quit', () => studio?.dispose())
+app.on('before-quit', () => { ai?.close(); studio?.dispose() })
 app.on('will-quit', () => globalShortcut.unregisterAll())
