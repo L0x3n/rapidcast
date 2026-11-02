@@ -1,6 +1,6 @@
 # RapidCast v1.0 release
 
-The application includes the P1-P7 studio workflow. The streaming engine remains BETA. This release is prepared locally; repository publishing, real-account acceptance, video upload and Devpost submission are separate user actions. No push or external publication is authorized by the local release build.
+The application includes the P1-P7 studio workflow. The streaming engine remains BETA. After the local v1.0 checks, Linus explicitly authorized publication. The [source repository](https://github.com/L0x3n/rapidcast), [Windows release](https://github.com/L0x3n/rapidcast/releases/tag/v1.0) and [final music demo](https://www.youtube.com/watch?v=r1Yl0Qw2ghU) are published. See SUBMISSION.md for the final submission record. Real-account acceptance remains separate. The tagged verification manifest records the original build before external publication.
 
 ## Run the portable build
 

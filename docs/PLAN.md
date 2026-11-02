@@ -14,14 +14,14 @@ All times are Europe/Stockholm. The full original request is in [BRIEF.md](BRIEF
 | P5 | Sun late | Six-step first-run wizard, devices, 15-second bandwidth test, recommendations, style, Repair | Fresh profile reaches ready to go live in under 5 minutes | Implemented; automated fresh local path passed; real human/Twitch five-minute acceptance pending |
 | P6 | Mon Nov 2 morning | JSONL sessions, live charts, history, widget impact, Markdown AI report | Correct metrics and report after a 10-minute test stream | Implemented; ten-minute local/simulator acceptance passed; real Twitch/model checks pending |
 | P7 | Mon late morning | .rcpack export/import, preview before install, sandbox imported code | Export and import on clean profile; scenes/widgets/theme work | Implemented; two-profile native acceptance passed; native dialogs/other-machine/OBS checks pending |
-| P8 | Mon 14:00-20:00 | Fixes only, README, DEVPOST, VIDEO, history scan, clean clone, v1.0 | Reproducible setup, no secrets, release and submission materials ready by 20:00 | Local release verification passed; final documentation/archive check and local tag follow; interactive submission remains Linus's action |
+| P8 | Mon 14:00-20:00 | Fixes only, README, DEVPOST, VIDEO, history scan, clean clone, v1.0 | Reproducible setup, no secrets, release and submission materials ready by 20:00 | Release verified/published; final music demo published; Devpost confirmed Project submitted on November 2 before the deadline |
 
 Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processing, hard deadline 23:00. P1-P4 are required, P5-P6 preferred, P7 optional. Only consider a community gallery if all other work is complete by Monday 10:00. If engine instability persists Sunday 13:00, mark it beta, make OBS browser sources the main demo path and continue to P3.
 
 ## Architecture and product commitments
 
 - Main process owns tokens, safeStorage, Twitch OAuth/EventSub/Helix, AI, FFmpeg and userData JSON/JSONL. Renderer receives sanitized state through narrow IPC. No native Node addons.
-- Public Client ID lives in `config/public.json`; blank until Linus supplies it. Settings override comes in P1. App works without Twitch/AI configured and explains next steps.
+- Linus's public Client ID is included in `config/public.json`; Settings supports an override. App works without Twitch/AI configured and explains next steps.
 - Renderer tabs: Live (program, scenes, Go Live/Stop, health, chat/feed), Studio (prompt, library, simulator, suggestions), Setup, Stats, Settings (AI, Twitch, output, devices, hotkeys, Repair).
 - Separate unthrottled compositor supplies 1920x1080 at 30/60 fps. Frame timing, backpressure and real dropped-frame counters are required evidence for P2. MediaRecorder/loopback compatibility must be proven on Linus's Windows machine early.
 - P3 worker contract: default export with meta/name/description/defaultSize/params, init(api), update(dt), draw(ctx,w,h). API: on, params, now, seeded random, image. Host fetches emotes/avatars. Worker sandbox must deny network and terminate slow execution without blocking compositor/UI.
@@ -168,11 +168,19 @@ Feature freeze is Monday 14:00. Submission target is 20:00 for YouTube processin
 - Ignore checks cover .env.local, data/session.json, logs, out, dist and node_modules. No em dashes in the UI/README/docs; no time inputs in implemented UI.
 - Hardware capture, microphone/loopback, Twitch authentication, EventSub, encoder throughput and live stream acceptance are not implemented or verified in P0.
 
+## Publication, November 2
+
+- Linus explicitly authorized GitHub publishing, the video upload and Devpost submission. GitHub CLI used the already authenticated L0x3n account. The public repository is https://github.com/L0x3n/rapidcast and v1.0 release is https://github.com/L0x3n/rapidcast/releases/tag/v1.0. The immutable release tag and original archive checksums are unchanged.
+- Created a narrated draft, then replaced it at Linus's request with a 157-second narration-free edit: original synthesized 120 BPM electronic instrumental, actual native app captures, kinetic feature captions, directional transitions and an audio-reactive waveform. Final video: https://www.youtube.com/watch?v=r1Yl0Qw2ghU. The earlier narrated upload is private. No third-party music or sampled tracks were used.
+- Captured isolated native AI/widget/setup UI flows and reran short stats and two-profile packs sequentially. Controlled simulator/fixed-response labels remain visible. Full media decode confirmed 1080p30 H.264/AAC and audible signal without clipping. No claim of real Twitch delivery or real-model acceptance was added.
+- Linus logged into Devpost, supplied country/survey answers, confirmed the three eligibility declarations and explicitly approved the platform agreements and submission. The existing RapidCast draft received the project narrative, thumbnail, four screenshots, public repository, verified session ID and final music video. Devpost redirected to https://devpost.com/software/rapidcast and showed Project submitted. Local proof screenshots are in ignored out/demo.
+- Submission/media sources and links are preserved in docs/SUBMISSION.md, docs/DEMO.md and scripts/demo. Runtime source files are unchanged. Post-publication regression: all 220 tests and the strict production build passed.
+
 ## Next handoff
 
-1. P0-P8 local implementation/release work is prepared. The public application ID is shipped and the verified original chat ID is recorded. Finish the final Markdown-only clone/package check before the local v1.0 tag; afterward use the tag, out/release manifests and docs/RELEASE.md as the handoff. Never push or publish without Linus's explicit instruction. v0.1 remains P3 at 872d22d; P7 is 41e8a71.
+1. P0-P8 implementation, verified v1.0 release, public demo and Devpost submission are complete. The public application ID and verified original chat ID are included. v1.0 stays at 23108b2; v0.1 stays at P3 872d22d. Documentation/media follow-ups on main do not replace the original verified binary/source archives.
 2. Linus performs Twitch login, chooses/configures a real model in the app, and follows P1-TESTS.md through P7-TESTS.md for the outstanding channel/device/game/OBS/human checks. The portable release has no credentials. Never request tokens, stream keys or AI keys in chat. Keep local automated/fixed-response/synthetic evidence distinct from real acceptance.
-3. Record/upload the demonstration using docs/VIDEO.md and publish the repository/release when explicitly authorized. Paste docs/DEVPOST.md with actual repository/video URLs and the verified chat ID. No remote, video upload or Devpost submission is configured/completed by this local phase. Keep ENGINE BETA/OBS fallback. Feature freeze is November 2 at 14:00 Stockholm, target submission 20:00, hard deadline 23:00. No gallery work is required.
+3. The submitted project uses the final narration-free music video and public repository/release. Publication details are in SUBMISSION.md. Keep ENGINE BETA/OBS fallback until actual acceptance is completed. Any future product changes are follow-up work; no gallery work is required for this submitted version.
 
 ## Submission tracking
 

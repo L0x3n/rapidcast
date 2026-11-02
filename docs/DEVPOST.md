@@ -7,11 +7,13 @@
 - Built with: Codex, TypeScript, Electron, React, Vite, FFmpeg, Twitch Helix/EventSub, Web Workers, OffscreenCanvas, Chart.js, OpenAI-compatible APIs.
 - Original Codex chat/session ID: `01a19363-ba10-7cd0-a5b7-58c1e60e709d`.
 - Provenance: verified from CODEX_THREAD_ID and the Codex app's thread metadata for Build RapidCast Twitch Studio, whose current turn is the P8 release request. It was not inferred from an attachment or visualization path.
-- Repository URL: Linus must add the actual public repository URL after publishing. No remote is configured and nothing has been pushed.
-- Video URL: Linus must add the actual uploaded three-minute demonstration URL after recording and processing.
-- Release: local v1.0 submission build; streaming engine remains labeled beta. Read RELEASE.md for measured validation and remaining real-account checks.
+- Repository URL: https://github.com/L0x3n/rapidcast
+- Video URL: https://www.youtube.com/watch?v=r1Yl0Qw2ghU
+- Windows release: https://github.com/L0x3n/rapidcast/releases/tag/v1.0
+- Final demo: 157-second edit with animated captions and original instrumental music, without narration. Simulator and fixed-response endpoint footage are labeled. See DEMO.md for production details.
+- Release: published v1.0 submission build; streaming engine remains labeled beta. Read RELEASE.md for measured validation and remaining real-account checks.
 
-Copy the narrative sections below into the corresponding Devpost fields. The fields above are submission notes; replace the repository/video entries with real links before submitting.
+The corresponding narrative and actual links were entered in the Devpost project. The fields above are submission notes. See SUBMISSION.md for the final publication record.
 
 ## Inspiration
 

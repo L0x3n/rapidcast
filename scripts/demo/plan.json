@@ -1,0 +1,125 @@
+[
+  {
+    "id": "01-hook",
+    "min": 12,
+    "title": "Chat has the ideas.",
+    "subtitle": "Give those ideas a place in the show.",
+    "kind": "hero",
+    "claim": [
+      "VIEWER IDEA",
+      "HOST APPROVAL",
+      "INTERACTIVE OVERLAY"
+    ]
+  },
+  {
+    "id": "02-studio",
+    "min": 16,
+    "title": "Build the unexpected.",
+    "kind": "ui-ai",
+    "claim": [
+      "ACTUAL DESKTOP APP",
+      "Simulator events",
+      "Fixed-response endpoint"
+    ]
+  },
+  {
+    "id": "03-approval",
+    "min": 18,
+    "title": "An idea needs your approval.",
+    "kind": "approval",
+    "claim": [
+      "SCREEN",
+      "APPROVE",
+      "TEST",
+      "PUBLISH"
+    ]
+  },
+  {
+    "id": "04-program",
+    "min": 12,
+    "title": "From an idea to program pixels.",
+    "kind": "program",
+    "claim": [
+      "RECORDED PROGRAM",
+      "Viewer credit",
+      "Reactive canvas widget"
+    ]
+  },
+  {
+    "id": "05-isolation",
+    "min": 14,
+    "title": "One broken widget. The show continues.",
+    "kind": "fault",
+    "claim": [
+      "SEPARATE WORKERS",
+      "No network or credentials",
+      "Runtime watchdogs"
+    ]
+  },
+  {
+    "id": "06-setup",
+    "min": 13,
+    "title": "Find your way to a first stream.",
+    "kind": "setup",
+    "claim": [
+      "GUIDED SETUP",
+      "Devices and performance",
+      "Four style previews"
+    ]
+  },
+  {
+    "id": "07-stats",
+    "min": 16,
+    "title": "Read the room. Keep the evidence.",
+    "kind": "stats",
+    "claim": [
+      "10 MINUTE LOCAL TEST",
+      "720 simulator messages",
+      "1 visible widget trigger"
+    ]
+  },
+  {
+    "id": "08-packs",
+    "min": 13,
+    "title": "Take your look with you.",
+    "kind": "packs",
+    "claim": [
+      "PORTABLE OVERLAYS",
+      "Four scenes and images",
+      "Review, test, then replace"
+    ]
+  },
+  {
+    "id": "09-codex",
+    "min": 18,
+    "title": "Built with Codex. In one chat.",
+    "kind": "architecture",
+    "claim": [
+      "LINUS DIRECTED",
+      "CODEX IMPLEMENTED",
+      "P0 THROUGH P8"
+    ]
+  },
+  {
+    "id": "10-verified",
+    "min": 14,
+    "title": "A release you can inspect.",
+    "kind": "verification",
+    "claim": [
+      "220 AUTOMATED TESTS",
+      "Native integration checks",
+      "Clean clone and ZIP launch"
+    ]
+  },
+  {
+    "id": "11-close",
+    "min": 10,
+    "title": "Let chat help build the show.",
+    "kind": "closing",
+    "claim": [
+      "RAPIDCAST",
+      "Built with Codex",
+      "Streaming engine beta"
+    ]
+  }
+]

@@ -6,7 +6,11 @@ An AI-native Twitch studio where viewers help build the show. Built with Codex i
 
 Linus's public Twitch application ID is included. Connect your own account in Setup. Real-account login/chat latency, real-model quality and the actual Twitch/fullscreen-game/device-sync acceptance still require interactive verification; controlled local tests are documented separately. See [release evidence and remaining checks](docs/RELEASE.md).
 
-For the portable Windows build, extract `RapidCast-1.0.0-windows-x64.zip` and launch `RapidCast.exe`. Keep the whole folder together. It includes Electron and FFmpeg, needs no Node installation and is unsigned. Locally generated artifacts, SHA256SUMS.txt and the source-commit manifest are in `out/release/`; nothing has been uploaded or published by this build.
+Download the [portable Windows build and verification files](https://github.com/L0x3n/rapidcast/releases/tag/v1.0), extract `RapidCast-1.0.0-windows-x64.zip` and launch `RapidCast.exe`. Keep the whole folder together. It includes Electron and FFmpeg, needs no Node installation and is unsigned. The public [source repository](https://github.com/L0x3n/rapidcast) includes setup and testing instructions. The tagged v1.0 archives preserve the verified release commit.
+
+[Watch the demo](https://www.youtube.com/watch?v=r1Yl0Qw2ghU). The short edit has original instrumental music and animated feature captions, without narration. Simulator/local test footage is labeled throughout; it does not claim real Twitch or model acceptance.
+
+![RapidCast: chat builds the stream](docs/media/rapidcast.png)
 
 ## Run on Windows
 

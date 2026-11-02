@@ -1,6 +1,8 @@
-# Three-minute RapidCast demonstration
+# RapidCast demonstration
 
-Target length: exactly 3:00. Record in English with readable application capture at 1920×1080. Favor the visible chat-to-widget transformation over settings. This is a shot list and narration draft, not a claim that a finished video has been recorded or uploaded.
+The final [public demonstration](https://www.youtube.com/watch?v=r1Yl0Qw2ghU) is a 157-second edit at 1920×1080 and 30 fps, without narration, with original electronic music, animated feature captions, transitions and a reactive waveform. Actual app captures use explicitly labeled simulator events and a fixed-response endpoint. Real Twitch delivery and real-model acceptance remain pending. See [production and reproduction notes](DEMO.md).
+
+The shot list and narration below are the original planning reference. They were superseded by the shorter, narration-free final edit at Linus's request. Keep future edits strictly under three minutes.
 
 ## Before recording
 
@@ -61,4 +63,4 @@ Review every clip for stale labels and private data before use. Record missing r
 
 ## Upload and submission
 
-The original Codex chat ID is `01a19363-ba10-7cd0-a5b7-58c1e60e709d`. Use the actual repository and video URLs, never placeholder links. The schedule in the project brief is November 2, 2026, Europe/Stockholm: feature freeze 14:00, upload/submission target 20:00, hard deadline 23:00. Allow time for video processing. Linus performs the actual upload and Devpost submission; this phase does not publish them.
+The original Codex chat ID is `01a19363-ba10-7cd0-a5b7-58c1e60e709d`. The source and final video links are recorded in DEVPOST.md. Linus authorized external publication and confirmed the required platform agreements during submission. The project brief sets November 2, 2026 at 23:00 Europe/Stockholm as the hard deadline. See SUBMISSION.md for the resulting status.
